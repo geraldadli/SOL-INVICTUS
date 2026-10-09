@@ -32,6 +32,12 @@
     <symbol id="i-chain" viewBox="0 0 24 24"><path d="M12 2l8 4.5v9L12 20l-8-4.5v-9z" /><path d="M12 11l8-4.5M12 11v9M12 11L4 6.5" /></symbol>
     <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h13v4" /><path d="M3 7v11a2 2 0 0 0 2 2h14a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1H5a2 2 0 0 1-2-1z" /><circle cx="16.5" cy="14" r="1.2" /></symbol>
     <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7L20 8.6" /><path d="M20 3.5v5.1h-5.1" /></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.6-3.4 8.3-8 9-4.6-.7-8-4.4-8-9V6z" /><path d="M9 12l2 2 4-4" /></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z" /><path d="M13.5 6.5l4 4" /></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></symbol>
   </svg>
   <a class="skip-link" href="#main-content">Skip to content</a>
   <div class="demo-banner"><span class="demo-tag">DEMO</span><span id="banner-text">Sepolia testnet. Fictional asset. No real money. No legal ownership rights.</span></div>
@@ -40,6 +46,7 @@
     <nav class="main-nav" aria-label="Main">
       <a href="#home" data-page="home" title="Home"><svg class="icon" aria-hidden="true"><use href="#i-home" /></svg><span class="nav-label">Home</span></a>
       <a href="#project" data-page="project" title="Project"><svg class="icon" aria-hidden="true"><use href="#i-sun" /></svg><span class="nav-label">Project</span></a>
+      <a href="#safeguards" data-page="safeguards" title="Safeguards"><svg class="icon" aria-hidden="true"><use href="#i-shield" /></svg><span class="nav-label">Safeguards</span></a>
       <a href="#portfolio" data-page="portfolio" title="My Sol Coins"><svg class="icon" aria-hidden="true"><use href="#i-pie" /></svg><span class="nav-label">My Sol Coins</span></a>
       <a href="#how" data-page="how" title="How it works"><svg class="icon" aria-hidden="true"><use href="#i-help" /></svg><span class="nav-label">How it works</span></a>
       <a href="#operator" data-page="operator" title="Operator lab" data-operator-only hidden><svg class="icon" aria-hidden="true"><use href="#i-flask" /></svg><span class="nav-label">Operator lab</span></a>
@@ -103,9 +110,14 @@
             </div>
             <div class="project-hero-sun"><div class="sun sun-small" aria-hidden="true"><div class="sun-rays"></div><div class="sun-disc"></div></div></div>
           </div>
-          <section id="reporting-status" class="card reporting-card" aria-live="polite"></section>
-          <section id="verification-panel" class="card reporting-card" aria-live="polite"></section>
-          <p><a href="#milestones" class="btn btn-md btn-outline">View funding milestones</a></p>
+          <a class="trust-strip" id="trust-strip" href="#safeguards">
+            <span class="trust-ic" aria-hidden="true"><svg class="icon"><use href="#i-shield" /></svg></span>
+            <span class="trust-items" id="trust-items">
+              <span class="trust-item"><i id="trust-checks-dot" data-tone="muted" aria-hidden="true"></i><span id="trust-checks">Checking monthly reports…</span></span>
+              <span class="trust-item"><i id="trust-funds-dot" data-tone="muted" aria-hidden="true"></i><span id="trust-funds">Checking funding stages…</span></span>
+            </span>
+            <span class="trust-go">How your money is protected<svg class="icon icon-sm" aria-hidden="true"><use href="#i-next" /></svg></span>
+          </a>
           <div class="project-layout">
             <div class="project-main">
               <div class="stat-grid">
@@ -385,6 +397,7 @@
               <section class="card status-card" aria-labelledby="status-title">
                 <div class="card-head"><h2 id="status-title">Reporting schedule</h2></div>
                 <div id="operator-reporting-status" aria-live="polite"></div>
+                <a class="op-link op-link-ink" href="#safeguards">How the automatic checks work</a>
                 <div id="reporting-controls" hidden>
                   <div class="op-switch-row">
                     <div><h3 id="purchase-state">Accepting purchases</h3><p id="purchase-state-note"></p></div>
@@ -404,7 +417,7 @@
               <section class="card proceeds-card" aria-labelledby="proceeds-title">
                 <div class="card-head"><h2 id="proceeds-title">Sale proceeds</h2></div>
                 <p class="card-text" id="proceeds-note">What investors paid for Sol Coins, held by the contract until you withdraw it.</p>
-                <a class="op-link" href="#milestones">View funding milestones</a>
+                <a class="op-link" href="#milestones">Open funding milestones</a>
                 <div class="proceeds-value" id="proceeds-rp">Rp0</div>
                 <div class="tile-note" id="proceeds-eth">0 test ETH</div>
                 <button type="button" id="withdraw-button" class="btn btn-sm btn-withdraw">Nothing to withdraw</button>
@@ -416,56 +429,225 @@
               </section>
             </div>
           </div>
-          <section id="operator-verification" class="card reporting-card" aria-live="polite"></section>
         </div>
       </div>
     </section>
 
-    <section id="milestones-page" class="page" hidden>
-      <div class="container milestone-container">
-        <a href="#project">← Back to project</a>
-        <h1>Funding milestones</h1>
-        <p>The operator submits records. A separate reviewer checks them. Approval unlocks the next portion of funding for the operator to withdraw.</p>
-        <p id="milestone-unavailable" role="status">Loading funding stages…</p>
-        <div id="milestone-content" hidden>
-          <section class="card milestone-stage">
-            <h2>Where the funding stands</h2>
-            <div id="milestone-totals" aria-live="polite"></div>
-            <p>Each stage unlocks 30%, then another 40%, then the final 30% of money actually raised. Later purchases follow the same approved percentage. Monthly income for share owners stays separate.</p>
-            <p>Reviewer wallet: <code id="milestone-reviewer-address" class="evidence-hash"></code></p>
-            <p id="milestone-role"></p>
-            <div id="milestone-demo-roles" hidden>
-              <p><strong>Local role-play:</strong> these are separate test accounts controlled on this computer. Sample records and this reviewer do not prove real-world work.</p>
-              <div class="milestone-actions">
-                <button id="milestone-demo-operator" class="btn btn-md btn-outline" type="button">Use operator demo wallet</button>
-                <button id="milestone-demo-reviewer" class="btn btn-md btn-outline" type="button">Use reviewer demo wallet</button>
-              </div>
+    <section id="safeguards-page" class="page" hidden>
+      <div class="container container-sg">
+        <header class="sg-hero">
+          <div class="sg-hero-text">
+            <div class="sg-eyebrow"><svg class="icon" aria-hidden="true"><use href="#i-shield" /></svg>Safeguards</div>
+            <h1 class="sg-title">How your money is <em>protected</em></h1>
+            <p class="sg-lede">You don't have to take the operator's word for it. The smart contract has two checks built in: every monthly income report must pass an automatic check, and the money paid for Sol Coins is released only as the project reaches approved milestones.</p>
+          </div>
+          <div class="sg-summary">
+            <button type="button" class="sg-sum" data-scroll="sg-checks">
+              <span class="sg-sum-n" aria-hidden="true">1</span>
+              <span class="sg-sum-body">
+                <span class="sg-sum-label">Automatic income checks</span>
+                <span class="op-state" id="sg-sum-checks-state" data-tone="muted"><i aria-hidden="true"></i><span id="sg-sum-checks-text">Loading…</span></span>
+                <span class="sg-sum-note" id="sg-sum-checks-note"></span>
+              </span>
+              <svg class="icon sg-sum-go" aria-hidden="true"><use href="#i-down" /></svg>
+            </button>
+            <button type="button" class="sg-sum" data-scroll="sg-milestones">
+              <span class="sg-sum-n" aria-hidden="true">2</span>
+              <span class="sg-sum-body">
+                <span class="sg-sum-label">Funding milestones</span>
+                <span class="op-state" id="sg-sum-funds-state" data-tone="muted"><i aria-hidden="true"></i><span id="sg-sum-funds-text">Loading…</span></span>
+                <span class="sg-sum-note" id="sg-sum-funds-note"></span>
+              </span>
+              <svg class="icon sg-sum-go" aria-hidden="true"><use href="#i-down" /></svg>
+            </button>
+          </div>
+        </header>
+        <p class="sg-demo" id="sg-demo"><span class="sg-demo-tag">DEMO</span><span id="sg-demo-text">Sample records and test money. These safeguards show how the checks work. They can't prove that real electricity was produced or real work was done.</span></p>
+
+        <nav class="sg-tabs" aria-label="On this page">
+          <button type="button" data-scroll="sg-roles"><span class="wide-only">Who's involved</span><span class="narrow-only">Roles</span></button>
+          <button type="button" data-scroll="sg-checks"><span class="wide-only">Income checks</span><span class="narrow-only">Checks</span></button>
+          <button type="button" data-scroll="sg-milestones"><span class="wide-only">Funding milestones</span><span class="narrow-only">Milestones</span></button>
+          <button type="button" data-scroll="sg-faq">FAQ</button>
+        </nav>
+
+        <section id="sg-roles" class="sg-section" aria-labelledby="sg-roles-title">
+          <h2 class="sg-h2" id="sg-roles-title">Who does what</h2>
+          <p class="sg-sub" id="sg-roles-sub">Four separate parties take part. No single wallet can both report the figures and approve them.</p>
+          <div class="sg-roles">
+            <div class="sg-role">
+              <span class="sg-role-ic" aria-hidden="true"><svg class="icon"><use href="#i-sun" /></svg></span>
+              <h3>Solar operator</h3>
+              <p>Runs the rooftop project. Publishes a report every month and submits records for each funding stage.</p>
+              <code class="sg-addr" id="sg-addr-operator"></code>
             </div>
-            <p>Approval alone does not transfer money. The operator withdraws approved funding in the Lab. If the reviewer stops responding or loses access, unapproved funding stays locked; recovery and refunds are not implemented.</p>
-          </section>
-          <div id="milestone-stages" class="milestone-grid"></div>
-          <p id="milestone-waiting" role="status"></p>
-          <form id="milestone-submit-form" class="card milestone-stage" hidden>
-            <h2 id="milestone-request-title">Request review</h2>
-            <p>For this demo, submit a clearly labeled sample statement. The full text and its fingerprint are recorded on the test chain and are public.</p>
-            <button id="milestone-sample" class="btn btn-md btn-outline" type="button">Use labeled sample records</button>
-            <label for="milestone-record" class="field-label">Supporting statement</label>
-            <textarea id="milestone-record" class="input" rows="5" maxlength="512" required></textarea>
-            <button id="milestone-submit" class="btn btn-md" type="submit">Submit for review</button>
-          </form>
-          <div id="milestone-review-form" class="card milestone-stage" hidden>
-            <h2 id="milestone-review-title">Review submission</h2>
-            <p id="milestone-review-evidence" class="milestone-record-text"></p>
-            <label class="milestone-confirm"><input id="milestone-review-confirm" type="checkbox"> I have reviewed this submission and understand that its records are unverified sample data for the demo.</label>
-            <label for="milestone-review-note" class="field-label">Review note (required when requesting changes)</label>
-            <textarea id="milestone-review-note" class="input" rows="3" maxlength="280"></textarea>
-            <div class="milestone-actions">
-              <button id="milestone-approve" class="btn btn-md" type="button">Approve this stage</button>
-              <button id="milestone-changes" class="btn btn-md btn-outline" type="button">Request changes</button>
+            <div class="sg-role">
+              <span class="sg-role-ic" aria-hidden="true"><svg class="icon"><use href="#i-pen" /></svg></span>
+              <h3>Checking service</h3>
+              <p>Reviews each month's records and digitally signs the figures. The contract only accepts reports it has signed.</p>
+              <code class="sg-addr" id="sg-addr-verifier"></code>
+            </div>
+            <div class="sg-role">
+              <span class="sg-role-ic" aria-hidden="true"><svg class="icon"><use href="#i-eye" /></svg></span>
+              <h3>Milestone reviewer</h3>
+              <p>Reads the operator's records for each funding stage, then approves the stage or asks for changes.</p>
+              <code class="sg-addr" id="sg-addr-reviewer"></code>
+            </div>
+            <div class="sg-role sg-role-you">
+              <span class="sg-role-ic" aria-hidden="true"><svg class="icon"><use href="#i-user" /></svg></span>
+              <h3>You, the investor</h3>
+              <p>Nothing to do here. Follow progress any time, no wallet needed, and claim your income on My Sol Coins.</p>
+              <span class="sg-addr" id="sg-addr-you"></span>
             </div>
           </div>
-          <a href="#operator" class="btn btn-md btn-outline" data-operator-only hidden>Go to Lab to withdraw approved funding</a>
-        </div>
+        </section>
+
+        <section id="sg-checks" class="sg-section" aria-labelledby="sg-checks-title">
+          <div class="sg-section-head">
+            <span class="sg-badge" aria-hidden="true">1</span>
+            <div>
+              <div class="overline">Safeguard 1</div>
+              <h2 class="sg-h2" id="sg-checks-title">Every monthly report is checked automatically</h2>
+              <p class="sg-sub">Income reaches shareholders only through a monthly report. Before the contract accepts one, a separate checking service must sign its figures, and the operator must deposit exactly the income those figures add up to.</p>
+            </div>
+          </div>
+          <ol class="sg-flow">
+            <li class="sg-step"><span class="sg-step-ic" aria-hidden="true"><svg class="icon"><use href="#i-calendar" /></svg></span><span class="sg-step-n">Step 1</span><h3>The month ends</h3><p>The operator gathers the month's meter readings, operating costs and repair reserve.</p></li>
+            <li class="sg-step"><span class="sg-step-ic" aria-hidden="true"><svg class="icon"><use href="#i-pen" /></svg></span><span class="sg-step-n">Step 2</span><h3>The records are checked</h3><p>The checking service compares the records and signs the figures. A signature is valid for one hour.</p></li>
+            <li class="sg-step"><span class="sg-step-ic" aria-hidden="true"><svg class="icon"><use href="#i-wallet" /></svg></span><span class="sg-step-n">Step 3</span><h3>Report plus payment</h3><p>The operator publishes the signed figures and deposits the income they add up to, to the rupiah.</p></li>
+            <li class="sg-step"><span class="sg-step-ic" aria-hidden="true"><svg class="icon"><use href="#i-check" /></svg></span><span class="sg-step-n">Step 4</span><h3>The contract verifies</h3><p>A wrong signature, month or amount is rejected. Once accepted, shareholders can claim right away.</p></li>
+          </ol>
+          <p class="sg-off" id="sg-checks-off" role="status" hidden></p>
+          <div class="sg-live">
+            <section class="card sg-panel" aria-labelledby="sg-sched-title">
+              <div class="sg-panel-head"><h3 id="sg-sched-title">Reporting schedule</h3><span class="op-state" id="sg-sched-state" data-tone="muted"><i aria-hidden="true"></i><span id="sg-sched-state-text">Loading…</span></span></div>
+              <div id="sg-schedule" aria-live="polite"></div>
+            </section>
+            <section class="card sg-panel" aria-labelledby="sg-income-title">
+              <div class="sg-panel-head"><h3 id="sg-income-title">Income for shareholders</h3><span class="sg-live-tag" id="sg-income-tag">Checked live</span></div>
+              <div id="sg-income" aria-live="polite"></div>
+            </section>
+          </div>
+          <div class="sg-callout">
+            <span class="sg-callout-ic" aria-hidden="true"><svg class="icon"><use href="#i-help" /></svg></span>
+            <p><strong>What if a report is late?</strong> New purchases pause automatically until it's published. Claiming income and sending Sol Coins keep working the whole time.</p>
+          </div>
+          <details class="sg-details"><summary>Technical details</summary><div id="sg-technical"></div></details>
+        </section>
+
+        <section id="sg-milestones" class="sg-section" aria-labelledby="sg-milestones-title">
+          <div class="sg-section-head">
+            <span class="sg-badge" aria-hidden="true">2</span>
+            <div>
+              <div class="overline">Safeguard 2</div>
+              <h2 class="sg-h2" id="sg-milestones-title">Your payment is released in three approved stages</h2>
+              <p class="sg-sub">When you buy Sol Coins, your payment is locked in the smart contract, not sent to the operator. Each stage the reviewer approves unlocks part of the money raised for the operator to withdraw.</p>
+            </div>
+          </div>
+          <p id="milestone-unavailable" class="sg-off" role="status">Loading funding stages…</p>
+          <div class="card sg-fund" id="sg-fund" hidden>
+            <div class="sg-fund-head">
+              <div><div class="sg-k">Raised from Sol Coin sales</div><div class="sg-big" id="sg-fund-raised">—</div></div>
+              <div class="sg-fund-pct"><b id="sg-fund-unlocked">0%</b><span>unlocked so far</span></div>
+            </div>
+            <div class="sg-meter" aria-hidden="true"><span class="m-rel" id="sg-meter-rel"></span><span class="m-avail" id="sg-meter-avail"></span><i style="left:30%"></i><i style="left:70%"></i></div>
+            <div class="sg-meter-marks" aria-hidden="true"><span style="left:30%">30%</span><span style="left:70%">70%</span><span style="left:100%">100%</span></div>
+            <div class="sg-fund-legend" id="milestone-totals" aria-live="polite"></div>
+          </div>
+          <ol id="milestone-stages" class="sg-stages"></ol>
+          <div class="sg-cycle" aria-label="How a stage is approved">
+            <span class="sg-cycle-label">How a stage is approved</span>
+            <ol class="sg-cycle-steps">
+              <li><svg class="icon" aria-hidden="true"><use href="#i-doc" /></svg>The operator submits records</li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-eye" /></svg>The reviewer checks them</li>
+              <li class="ok"><svg class="icon" aria-hidden="true"><use href="#i-check" /></svg>Approved: funding unlocks</li>
+            </ol>
+            <p class="sg-cycle-loop"><svg class="icon" aria-hidden="true"><use href="#i-refresh" /></svg>If the reviewer asks for changes, the stage stays locked until the operator fixes the records and submits again.</p>
+          </div>
+          <div id="milestone-content" class="card sg-action" hidden>
+            <div class="sg-panel-head"><h3>Your part</h3><span class="sg-role-pill" id="milestone-role-pill">Visitor</span></div>
+            <p class="sg-action-text" id="milestone-role"></p>
+            <div id="milestone-demo-roles" class="sg-try" hidden>
+              <span class="sg-try-label">Local demo · try it as</span>
+              <div class="filters" role="group" aria-label="Demo role">
+                <button id="milestone-demo-operator" class="chip-button" type="button" aria-pressed="false">Solar operator</button>
+                <button id="milestone-demo-reviewer" class="chip-button" type="button" aria-pressed="false">Milestone reviewer</button>
+              </div>
+              <p class="field-help field-help-small">Separate test accounts on this computer. Their sample records don't prove real-world work.</p>
+            </div>
+            <p id="milestone-waiting" class="sg-waiting" role="status" hidden></p>
+            <form id="milestone-submit-form" class="sg-form" novalidate hidden>
+              <h4 id="milestone-request-title">Request review</h4>
+              <div class="sg-label-row"><label for="milestone-record" class="field-label">Supporting records</label><button id="milestone-sample" class="text-link" type="button">Fill in the labelled sample</button></div>
+              <textarea id="milestone-record" class="input" rows="5" maxlength="512" required aria-describedby="milestone-record-help"></textarea>
+              <p class="field-help field-help-small" id="milestone-record-help"><span id="milestone-record-count">0</span> / 512 bytes. The full text and its fingerprint are stored publicly on the test chain, so leave out personal details.</p>
+              <button id="milestone-submit" class="btn btn-md" type="submit">Submit for review</button>
+            </form>
+            <div id="milestone-review-form" class="sg-form" hidden>
+              <h4 id="milestone-review-title">Review submission</h4>
+              <blockquote id="milestone-review-evidence" class="sg-quote milestone-record-text"></blockquote>
+              <label class="milestone-confirm"><input id="milestone-review-confirm" type="checkbox"> I have read this exact submission and understand its records are unverified sample data for the demo.</label>
+              <label for="milestone-review-note" class="field-label">Note to the operator <span class="sg-optional">required to request changes</span></label>
+              <textarea id="milestone-review-note" class="input" rows="3" maxlength="280"></textarea>
+              <div class="milestone-actions">
+                <button id="milestone-approve" class="btn btn-md" type="button">Approve this stage</button>
+                <button id="milestone-changes" class="btn btn-md btn-outline" type="button">Request changes</button>
+              </div>
+            </div>
+            <a href="#operator" id="milestone-withdraw" class="btn btn-md btn-outline" hidden>Withdraw unlocked funding in the Operator lab</a>
+          </div>
+        </section>
+
+        <section id="sg-faq" class="sg-section" aria-labelledby="sg-faq-title">
+          <div class="sg-section-head">
+            <span class="sg-badge sg-badge-q" aria-hidden="true">?</span>
+            <div>
+              <div class="overline">FAQ</div>
+              <h2 class="sg-h2" id="sg-faq-title">Questions people ask</h2>
+              <p class="sg-sub">Stuck on a button, a status or a number? Start here.</p>
+            </div>
+          </div>
+          <div class="filters sg-faq-filters" role="group" aria-label="Filter questions">
+            <button type="button" class="chip-button" data-faq="all" aria-pressed="true">All</button>
+            <button type="button" class="chip-button" data-faq="start" aria-pressed="false">Getting started</button>
+            <button type="button" class="chip-button" data-faq="checks" aria-pressed="false">Automatic checks</button>
+            <button type="button" class="chip-button" data-faq="milestones" aria-pressed="false">Funding milestones</button>
+          </div>
+          <div class="sg-faq">
+            <h3 class="sg-faq-group" data-cat="start">Getting started</h3>
+            <details class="sg-q" data-cat="start"><summary>Do I need to do anything on this page?</summary><div class="sg-a"><p>No. As an investor, both safeguards run on their own. You can follow progress here at any time, even without connecting a wallet. Only the operator, the checking service and the milestone reviewer take actions.</p></div></details>
+            <details class="sg-q" data-cat="start"><summary>Why are the submit and approve buttons missing or greyed out?</summary><div class="sg-a"><p>Every action belongs to one specific wallet. Only the operator wallet can submit records, and only the reviewer wallet can approve them. Everyone else sees progress, not buttons.</p><p>In the local demo, use <strong>Try it as</strong> under <strong>Your part</strong> to switch between the operator and the reviewer. With MetaMask, switch to the matching account.</p></div></details>
+            <details class="sg-q" data-cat="start"><summary>What are the demo wallets?</summary><div class="sg-a"><p>In the local demo, test accounts on your computer play each role: Alice and Budi are investors, plus the solar operator and the milestone reviewer. Switching between them lets you walk through the whole flow on your own. They only hold test ETH.</p></div></details>
+            <details class="sg-q" data-cat="start"><summary>Why can't I buy Sol Coins right now?</summary><div class="sg-a"><p>Purchases pause when a monthly report is overdue or when the operator pauses them. Claiming income and sending Sol Coins keep working either way. Purchases reopen as soon as the overdue report is published.</p><p>The operator wallet can never buy Sol Coins. Switch to an investor wallet from the wallet menu.</p></div></details>
+            <details class="sg-q" data-cat="start"><summary>It says milestone funding isn't active. Why?</summary><div class="sg-a"><p>Milestones need the newest contract, which runs in the local blockchain demo started with <code>npm start</code>. The public Sepolia contract and the browser simulation don't include it, so sale proceeds there aren't locked by stage.</p></div></details>
+            <details class="sg-q" data-cat="start"><summary>Is any of this real money or a real project?</summary><div class="sg-a"><p>No. The solar project is fictional, the records are labelled samples, and every payment uses test ETH, which has no value. Nothing here gives you legal ownership of anything.</p></div></details>
+
+            <h3 class="sg-faq-group" data-cat="checks">Automatic checks</h3>
+            <details class="sg-q" data-cat="checks"><summary>What exactly does the automatic check verify?</summary><div class="sg-a"><p>Four things, all checked by the contract itself:</p><ul><li>the checking service signed the figures,</li><li>they're for this project and the month that's due,</li><li>the signature hasn't expired, and</li><li>the operator's deposit equals the income the figures add up to: electricity sold, minus costs and the repair reserve.</li></ul><p>If any one of these fails, the report is rejected and nothing is paid out.</p></div></details>
+            <details class="sg-q" data-cat="checks"><summary>Can the operator change the numbers after they've been checked?</summary><div class="sg-a"><p>No. The signature covers every figure. Changing even one rupiah of generation, costs or reserve breaks it, and the contract refuses the report.</p></div></details>
+            <details class="sg-q" data-cat="checks"><summary>Who runs the checking service? Could the operator check itself?</summary><div class="sg-a"><p>The checking service is a separate wallet, fixed when the contract was created. The contract refuses to start if the checker and the operator are the same wallet. In the local demo, the checking service runs on your computer next to the test chain.</p></div></details>
+            <details class="sg-q" data-cat="checks"><summary>Why does the operator send money with the report?</summary><div class="sg-a"><p>That deposit is the income. The moment the report is accepted, the contract splits it equally across all 1,000 Sol Coins, so the published figures and the money paid out can never disagree.</p></div></details>
+            <details class="sg-q" data-cat="checks"><summary>When is a report due, and what happens if it's late?</summary><div class="sg-a"><p>Reporting for a month opens when that month ends, and the report is due 7 days later. Months must be reported in order, without skipping any.</p><p>If the deadline passes, new purchases are blocked until the report is published. Claims and transfers keep working.</p></div></details>
+            <details class="sg-q" data-cat="checks"><summary>What does "waiting to be claimed" mean?</summary><div class="sg-a"><p>It's income that has been deposited but not yet claimed by shareholders. The contract keeps it separate from sale proceeds, so the operator can't withdraw it. Your share waits for you on My Sol Coins.</p></div></details>
+            <details class="sg-q" data-cat="checks"><summary>I'm the operator and my check expired. What now?</summary><div class="sg-a"><p>Signed figures are only valid for one hour, so an old approval can't be reused later. In the Operator lab, click <strong>Check monthly data</strong> again to get a fresh signature, then publish.</p></div></details>
+            <details class="sg-q" data-cat="checks"><summary>Does a passed check prove the panels produced real electricity?</summary><div class="sg-a"><p>No. It proves the figures match what the checking service signed and that the deposit matches the figures. A check is only as good as the records behind it, and in this demo those are sample data.</p></div></details>
+
+            <h3 class="sg-faq-group" data-cat="milestones">Funding milestones</h3>
+            <details class="sg-q" data-cat="milestones"><summary>Where does my money go when I buy Sol Coins?</summary><div class="sg-a"><p>Into the smart contract, not the operator's wallet. It stays locked there and becomes available to the operator only as each funding stage is approved.</p></div></details>
+            <details class="sg-q" data-cat="milestones"><summary>How much is unlocked at each stage?</summary><div class="sg-a"><p>30% after <strong>Equipment purchase</strong>, another 40% after <strong>Installation complete</strong> (70% in total), and the final 30% after <strong>System handover</strong>. The percentages apply to everything raised, including Sol Coins bought later.</p></div></details>
+            <details class="sg-q" data-cat="milestones"><summary>What does the reviewer check?</summary><div class="sg-a"><p>The operator's records for the stage, such as purchase orders, inspection reports or handover documents. In this demo they're clearly labelled sample statements. Before deciding, the reviewer must confirm they've read the exact submission.</p></div></details>
+            <details class="sg-q" data-cat="milestones"><summary>What happens when the reviewer asks for changes?</summary><div class="sg-a"><p>The stage stays locked, and the reviewer's note appears on it. The operator fixes the records and submits again; each new submission gets a new number. Nothing unlocks until a submission is approved.</p></div></details>
+            <details class="sg-q" data-cat="milestones"><summary>Does approving a stage send money to the operator?</summary><div class="sg-a"><p>No. Approval only unlocks funding. The operator still has to withdraw it from the Operator lab, and every withdrawal is recorded on the chain.</p></div></details>
+            <details class="sg-q" data-cat="milestones"><summary>Can stages be skipped or approved out of order?</summary><div class="sg-a"><p>No. The contract only accepts the next stage in line. Stage 2 can't be submitted until Stage 1 is approved, and so on.</p></div></details>
+            <details class="sg-q" data-cat="milestones"><summary>What if the reviewer stops responding or loses their wallet?</summary><div class="sg-a"><p>Funding that hasn't been approved stays locked. This demo has no way to replace the reviewer or refund buyers. That's a known limit of the demo.</p></div></details>
+            <details class="sg-q" data-cat="milestones"><summary>Do milestones affect my monthly income?</summary><div class="sg-a"><p>No. Milestones only control the money raised from Sol Coin sales. Monthly income from reports goes to shareholders separately, and you can claim it at any time.</p></div></details>
+            <details class="sg-q" data-cat="milestones"><summary>What is a record fingerprint? Are submissions private?</summary><div class="sg-a"><p>A fingerprint is a short code calculated from the exact submitted text. If even one character changes, the fingerprint changes, so anyone can tell the reviewer approved exactly what was submitted. It doesn't prove who wrote the records.</p><p>Submissions aren't private: the full text and its fingerprint are stored on the test chain for anyone to read.</p></div></details>
+          </div>
+          <div class="sg-end">
+            <p>Still unsure how income works?</p>
+            <div class="sg-end-actions"><a class="btn btn-inline btn-compact btn-outline" href="#how">Read How it works</a><a class="btn btn-inline btn-compact" href="#project">Back to the project</a></div>
+          </div>
+        </section>
       </div>
     </section>
 
@@ -503,6 +685,11 @@
             <a class="btn btn-example" href="#project">Meet the project</a>
           </div>
         </div>
+        <a class="how-safe" href="#safeguards">
+          <span class="how-safe-ic" aria-hidden="true"><svg class="icon"><use href="#i-shield" /></svg></span>
+          <span class="how-safe-text"><b>Who keeps the operator honest?</b><span>Every monthly report is checked automatically, and the money you pay is released only in approved stages.</span></span>
+          <span class="how-safe-go">See the safeguards<svg class="icon icon-sm" aria-hidden="true"><use href="#i-next" /></svg></span>
+        </a>
         <p class="how-note" id="how-note">The solar project and its reports are fictional: no panels, meters or utilities are connected. Purchases, reports and claims are real Sepolia testnet transactions. Rp1 of demo value equals 1 gwei of test ETH. That's a display scale, not an exchange rate.</p>
       </div>
     </section>
@@ -511,6 +698,7 @@
   <nav class="tab-bar" aria-label="Main">
     <a href="#home" data-page="home"><svg class="icon" aria-hidden="true"><use href="#i-home" /></svg>Home<span class="tab-dot" aria-hidden="true"></span></a>
     <a href="#project" data-page="project"><svg class="icon" aria-hidden="true"><use href="#i-sun" /></svg>Project<span class="tab-dot" aria-hidden="true"></span></a>
+    <a href="#safeguards" data-page="safeguards"><svg class="icon" aria-hidden="true"><use href="#i-shield" /></svg>Safeguards<span class="tab-dot" aria-hidden="true"></span></a>
     <a href="#portfolio" data-page="portfolio"><svg class="icon" aria-hidden="true"><use href="#i-pie" /></svg>My Sol Coins<span class="tab-dot" aria-hidden="true"></span></a>
     <a href="#operator" data-page="operator" data-operator-only hidden><svg class="icon" aria-hidden="true"><use href="#i-flask" /></svg>Lab<span class="tab-dot" aria-hidden="true"></span></a>
     <a href="#how" data-page="how"><svg class="icon" aria-hidden="true"><use href="#i-help" /></svg>Guide<span class="tab-dot" aria-hidden="true"></span></a>
