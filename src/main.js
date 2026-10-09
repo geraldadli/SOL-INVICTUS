@@ -443,7 +443,7 @@ const TOTAL = 1000, COLS = 40;
 const ledgerEl = $('#tiles'), tipEl = $('#tip');
 const tileEls = Array.from({ length: TOTAL }, () => document.createElement('i'));
 ledgerEl.append(...tileEls);
-const ledger = { kinds: [], geo: null, mx: -1e4, my: -1e4, rippling: false, painting: false, mine: undefined, owner: undefined, reports: undefined };
+const ledger = { kinds: [], geo: null, mx: -1e4, my: -1e4, tx: -1e4, ty: -1e4, rippling: false, painting: false, mine: undefined, owner: undefined, reports: undefined };
 function renderLedger() {
   if (!state) return;
   const sold = TOTAL - state.available, mine = address && !isOperator() ? Math.min(state.balance, sold) : 0;
@@ -482,13 +482,19 @@ function showTip(text, x, y) {
   tipEl.textContent = text; tipEl.classList.add('on');
   tipEl.style.left = `${Math.min(Math.max(8, x + 14), innerWidth - tipEl.offsetWidth - 8)}px`; tipEl.style.top = `${y + 18}px`;
 }
+// Tiles near the pointer lift (scale, ring, shadow, colour) along a smooth bell curve. The pointer is eased too, so the lift trails the cursor instead of snapping to it.
 function ripple() {
   ledger.geo ??= tileEls.map(tile => ({ x: tile.offsetLeft + tile.offsetWidth / 2, y: tile.offsetTop + tile.offsetHeight / 2 }));
-  let moving = false;
+  const radius = 120, near = ledger.mx > -1e3;
+  if (near) { ledger.mx += (ledger.tx - ledger.mx) * .3; ledger.my += (ledger.ty - ledger.my) * .3; }
+  let moving = near && Math.hypot(ledger.tx - ledger.mx, ledger.ty - ledger.my) > .5;
   tileEls.forEach((tile, i) => {
-    const g = ledger.geo[i], target = 1 + .9 * Math.max(0, 1 - Math.hypot(g.x - ledger.mx, g.y - ledger.my) / 78) ** 2, cur = tile._scale ?? 1;
-    const next = Math.abs(target - cur) < .004 ? target : cur + (target - cur) * .35;
-    if (next !== cur) { tile._scale = next; tile.style.scale = next === 1 ? '' : next.toFixed(3); moving = true; }
+    const g = ledger.geo[i], t = near ? Math.max(0, 1 - Math.hypot(g.x - ledger.mx, g.y - ledger.my) / radius) : 0;
+    const target = t * t * (3 - 2 * t), cur = tile._lift ?? 0, next = Math.abs(target - cur) < .003 ? target : cur + (target - cur) * .22;
+    if (next === cur) return;
+    tile._lift = next; moving = true;
+    if (next === 0) { tile.style.removeProperty('--h'); tile.style.scale = ''; tile.style.zIndex = ''; return; }
+    tile.style.setProperty('--h', next.toFixed(3)); tile.style.scale = (1 + .5 * next).toFixed(3); tile.style.zIndex = String(1 + Math.round(next * 10));
   });
   if (moving) requestAnimationFrame(ripple); else ledger.rippling = false;
 }
@@ -501,13 +507,14 @@ ledgerEl.addEventListener('pointerdown', event => {
 });
 ledgerEl.addEventListener('pointermove', event => {
   const r = ledgerEl.getBoundingClientRect(), i = tileAt(event.clientX, event.clientY), kind = ledger.kinds[i];
-  ledger.mx = event.clientX - r.left; ledger.my = event.clientY - r.top;
+  ledger.tx = event.clientX - r.left; ledger.ty = event.clientY - r.top;
+  if (ledger.mx < -1e3) { ledger.mx = ledger.tx; ledger.my = ledger.ty; }
   if (ledger.painting) paintTo(i);
   const name = `Sol Coin #${String(i + 1).padStart(4, '0')}`;
   showTip(kind === 'mine' ? `${name} · Yours` : kind === 'sold' ? `${name} · Held by another investor` : `${name} · Available · ${idr(100000)}`, event.clientX, event.clientY);
   if (event.pointerType === 'mouse') kickRipple();
 });
-ledgerEl.addEventListener('pointerleave', () => { ledger.mx = ledger.my = -1e4; tipEl.classList.remove('on'); kickRipple(); });
+ledgerEl.addEventListener('pointerleave', () => { ledger.mx = ledger.my = ledger.tx = ledger.ty = -1e4; tipEl.classList.remove('on'); kickRipple(); });
 for (const type of ['pointerup', 'pointercancel']) ledgerEl.addEventListener(type, () => { ledger.painting = false; });
 addEventListener('resize', () => { ledger.geo = null; });
 
