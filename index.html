@@ -102,6 +102,8 @@
             <div class="project-hero-sun"><div class="sun sun-small" aria-hidden="true"><div class="sun-rays"></div><div class="sun-disc"></div></div></div>
           </div>
           <section id="reporting-status" class="card reporting-card" aria-live="polite"></section>
+          <section id="verification-panel" class="card reporting-card" aria-live="polite"></section>
+          <p><a href="#milestones" class="btn btn-md btn-outline">View funding milestones</a></p>
           <div class="project-layout">
             <div class="project-main">
               <div class="stat-grid">
@@ -295,29 +297,39 @@
           <div class="op-top">
             <form id="report-form" class="card report-card" novalidate>
               <h2>Monthly report</h2>
+              <div id="proof-controls" hidden>
+                <p id="report-opening-note" class="field-help" role="status" hidden></p>
+                <div id="local-report-clock" hidden>
+                  <button type="button" id="advance-local-report" class="btn btn-md btn-outline">Move demo to next reporting date</button>
+                  <p class="field-help">For the local demo only. Moves the test date forward so you can continue without waiting. Your demo shares and earned income stay the same.</p>
+                </div>
+                <button type="button" id="load-evidence" class="btn btn-md btn-outline" aria-describedby="report-opening-note evidence-note">Check monthly data</button>
+                <p id="evidence-note" class="field-help" role="status">First, check this month’s records. Then review the figures below and publish the report with the required payment.</p>
+                <button type="button" id="download-evidence" class="btn btn-md btn-outline" hidden>Download supporting records</button>
+              </div>
               <label class="field-label" for="report-period">Reporting month</label>
               <select id="report-period" class="input" aria-describedby="last-published-note"></select>
               <div class="field-help field-help-small" id="last-published-note"></div>
               <label class="field-label" for="report-kwh">Electricity generated</label>
               <div class="input-wrap"><input id="report-kwh" class="input input-strong has-suffix" value="1265" inputmode="numeric" autocomplete="off" /><span class="input-suffix">kWh</span></div>
-              <div class="field-label" id="tariff-label">Electricity tariff</div>
+              <div class="field-label" id="tariff-label">Price per kWh</div>
               <div class="input-static" aria-labelledby="tariff-label"><span>Rp1,500 / kWh</span><small>Fixed in the contract</small></div>
               <div class="field-pair">
                 <div><label class="field-label" for="report-costs">Operating costs</label><div class="input-wrap"><span class="input-prefix">Rp</span><input id="report-costs" class="input input-strong has-prefix" value="420000" inputmode="numeric" autocomplete="off" /></div></div>
-                <div><label class="field-label" for="report-reserve">Maintenance reserve</label><div class="input-wrap"><span class="input-prefix">Rp</span><input id="report-reserve" class="input input-strong has-prefix" value="250000" inputmode="numeric" autocomplete="off" /></div></div>
+                <div><label class="field-label" for="report-reserve">Set aside for repairs</label><div class="input-wrap"><span class="input-prefix">Rp</span><input id="report-reserve" class="input input-strong has-prefix" value="250000" inputmode="numeric" autocomplete="off" /></div></div>
               </div>
             </form>
             <div class="breakdown">
               <h2>Breakdown</h2>
               <div class="breakdown-rows">
-                <div class="breakdown-row"><span>Electricity receipts<span class="breakdown-note" id="bd-receipts-note"></span></span><span class="mono" id="bd-receipts"></span></div>
+                <div class="breakdown-row"><span>Income from electricity<span class="breakdown-note" id="bd-receipts-note"></span></span><span class="mono" id="bd-receipts"></span></div>
                 <div class="breakdown-row"><span>− Operating costs</span><span class="mono" id="bd-costs"></span></div>
-                <div class="breakdown-row"><span>− Maintenance reserve</span><span class="mono" id="bd-reserve"></span></div>
+                <div class="breakdown-row"><span>− Set aside for repairs</span><span class="mono" id="bd-reserve"></span></div>
               </div>
               <div class="breakdown-bar" aria-hidden="true"><span class="bar-costs" id="bar-costs"></span><span class="bar-reserve" id="bar-reserve"></span><span class="bar-dist" id="bar-dist"></span></div>
               <div class="legend" aria-hidden="true"><span><i class="bar-costs"></i>Costs</span><span><i class="bar-reserve"></i>Reserve</span><span><i class="bar-dist"></i>To shareholders</span></div>
               <div id="bd-ok">
-                <div class="dist"><div class="dist-label">Amount to distribute</div><div class="dist-value" id="bd-dist"></div><div class="dist-note"><span id="bd-dist-eth"></span> deposited with the report</div></div>
+                <div class="dist"><div class="dist-label">Income to share</div><div class="dist-value" id="bd-dist"></div><div class="dist-note">Send <span id="bd-dist-eth"></span> when publishing this report</div></div>
                 <div class="per-share"><span>Per Sol Coin (÷ 1,000)</span><span><b id="bd-per-share"></b><small id="bd-per-share-eth"></small></span></div>
               </div>
               <div id="bd-bad" class="breakdown-error" aria-live="polite" hidden></div>
@@ -330,12 +342,62 @@
             <div class="card reports-card"><h2>Published reports</h2><div id="reports-table"></div></div>
             <div class="card proceeds-card">
               <h2>Sale proceeds</h2>
-              <p class="card-text">What investors paid for Sol Coins, held by the contract until you withdraw it.</p>
+              <p class="card-text" id="proceeds-note">Funding received from Sol Coin purchases.</p>
+              <a href="#milestones">View funding milestones</a>
               <div class="proceeds-value" id="proceeds-rp">Rp0</div>
               <div class="tile-note" id="proceeds-eth">0 test ETH</div>
               <button type="button" id="withdraw-button" class="btn btn-md">Nothing to withdraw</button>
             </div>
           </div>
+          <section id="operator-verification" class="card reporting-card" aria-live="polite"></section>
+        </div>
+      </div>
+    </section>
+
+    <section id="milestones-page" class="page" hidden>
+      <div class="container milestone-container">
+        <a href="#project">← Back to project</a>
+        <h1>Funding milestones</h1>
+        <p>The operator submits records. A separate reviewer checks them. Approval unlocks the next portion of funding for the operator to withdraw.</p>
+        <p id="milestone-unavailable" role="status">Loading funding stages…</p>
+        <div id="milestone-content" hidden>
+          <section class="card milestone-stage">
+            <h2>Where the funding stands</h2>
+            <div id="milestone-totals" aria-live="polite"></div>
+            <p>Each stage unlocks 30%, then another 40%, then the final 30% of money actually raised. Later purchases follow the same approved percentage. Monthly income for share owners stays separate.</p>
+            <p>Reviewer wallet: <code id="milestone-reviewer-address" class="evidence-hash"></code></p>
+            <p id="milestone-role"></p>
+            <div id="milestone-demo-roles" hidden>
+              <p><strong>Local role-play:</strong> these are separate test accounts controlled on this computer. Sample records and this reviewer do not prove real-world work.</p>
+              <div class="milestone-actions">
+                <button id="milestone-demo-operator" class="btn btn-md btn-outline" type="button">Use operator demo wallet</button>
+                <button id="milestone-demo-reviewer" class="btn btn-md btn-outline" type="button">Use reviewer demo wallet</button>
+              </div>
+            </div>
+            <p>Approval alone does not transfer money. The operator withdraws approved funding in the Lab. If the reviewer stops responding or loses access, unapproved funding stays locked; recovery and refunds are not implemented.</p>
+          </section>
+          <div id="milestone-stages" class="milestone-grid"></div>
+          <p id="milestone-waiting" role="status"></p>
+          <form id="milestone-submit-form" class="card milestone-stage" hidden>
+            <h2 id="milestone-request-title">Request review</h2>
+            <p>For this demo, submit a clearly labeled sample statement. The full text and its fingerprint are recorded on the test chain and are public.</p>
+            <button id="milestone-sample" class="btn btn-md btn-outline" type="button">Use labeled sample records</button>
+            <label for="milestone-record" class="field-label">Supporting statement</label>
+            <textarea id="milestone-record" class="input" rows="5" maxlength="512" required></textarea>
+            <button id="milestone-submit" class="btn btn-md" type="submit">Submit for review</button>
+          </form>
+          <div id="milestone-review-form" class="card milestone-stage" hidden>
+            <h2 id="milestone-review-title">Review submission</h2>
+            <p id="milestone-review-evidence" class="milestone-record-text"></p>
+            <label class="milestone-confirm"><input id="milestone-review-confirm" type="checkbox"> I have reviewed this submission and understand that its records are unverified sample data for the demo.</label>
+            <label for="milestone-review-note" class="field-label">Review note (required when requesting changes)</label>
+            <textarea id="milestone-review-note" class="input" rows="3" maxlength="280"></textarea>
+            <div class="milestone-actions">
+              <button id="milestone-approve" class="btn btn-md" type="button">Approve this stage</button>
+              <button id="milestone-changes" class="btn btn-md btn-outline" type="button">Request changes</button>
+            </div>
+          </div>
+          <a href="#operator" class="btn btn-md btn-outline" data-operator-only hidden>Go to Lab to withdraw approved funding</a>
         </div>
       </div>
     </section>

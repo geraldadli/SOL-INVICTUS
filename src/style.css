@@ -568,6 +568,24 @@ select.input { cursor: pointer; }
 .reporting-card { margin-top: 16px; margin-bottom: 24px; padding: 24px; }
 .reporting-card p { margin: 12px 0; line-height: 1.6; }
 .reporting-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.evidence-hash { overflow-wrap: anywhere; font-size: .85em; }
+.reporting-card summary { cursor: pointer; font-weight: 600; padding: 8px 0; }
+.reporting-card details { margin-top: 12px; }
+#proof-controls { padding-bottom: 20px; }
+.input[readonly] { opacity: .8; cursor: default; }
+.milestone-container { padding-top: 32px; padding-bottom: 64px; }
+.milestone-container h1 { margin: 24px 0 16px; }
+.milestone-container p { margin: 14px 0; line-height: 1.65; }
+.milestone-stage { padding: 24px; margin: 20px 0; min-width: 0; }
+.milestone-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.milestone-stage h2 { font-size: 24px; }
+.milestone-record-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.milestone-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+.milestone-confirm { display: flex; align-items: flex-start; gap: 12px; line-height: 1.6; }
+.milestone-confirm input { margin-top: 6px; flex-shrink: 0; }
+.milestone-stage textarea { height: auto; padding: 14px; resize: vertical; margin-bottom: 18px; }
+.milestone-stage summary { cursor: pointer; }
+@media (max-width: 800px) { .milestone-grid { grid-template-columns: 1fr; gap: 0; } }
 @media (prefers-reduced-motion: reduce) {
   .wall-tilt, .wall-pick, .home-hint-dot { animation: none; transition: none; }
   .sun-rays, .skeleton { animation: none; }

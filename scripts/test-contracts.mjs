@@ -30,7 +30,7 @@ try {
     await delay(250);
   }
   if (!ready) throw new Error(startupError || 'Test chain did not start.');
-  test = spawn(process.execPath, ['--test', 'tests/contract.test.mjs'], {
+  test = spawn(process.execPath, ['--test', '--test-concurrency=1', 'tests/contract.test.mjs', 'tests/milestones.test.mjs', 'tests/verification.test.mjs'], {
     stdio: 'inherit', windowsHide: true, env: { ...process.env, CONTRACT_TEST_RPC_URL: rpc },
   });
   process.exitCode = await new Promise((resolve, reject) => { test.on('exit', code => resolve(code ?? 1)); test.on('error', reject); });
