@@ -5,6 +5,7 @@ import { reportAmounts, utcPeriod } from './reporting.js';
 import { auditIncome, validateEvidence, operatingStatuses } from './verification.js';
 import { advanceLocalDemo, canAdvanceLocalDemo } from './local-demo-clock.js';
 import { createHomeWall } from './home-wall.js';
+import { createReveal, fadeInPage, initButtonRays, tick } from './motion.js';
 import { createMilestoneScreen, readMilestones } from './milestones.js';
 import { verifierEndpoint } from './deployment-settings.js';
 import { BrowserProvider, Contract, JsonRpcProvider, ZeroAddress, formatEther, getAddress, isAddress } from 'ethers';
@@ -65,6 +66,21 @@ const reverts = {
   'Reporting month has not ended': 'This reporting month has not ended yet. Check the reporting opening time.',
 };
 
+const utcShort = timestamp => `${new Date(timestamp * 1000).toLocaleString('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })} UTC`;
+const utcDay = timestamp => new Date(timestamp * 1000).toLocaleDateString('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short' });
+const utcMonthStart = period => Date.UTC(Math.floor(period / 100), period % 100 - 1, 1) / 1000;
+const idrCompact = wei => { const n = Number(wei) / 1e9; return n >= 1e6 ? `Rp${(n / 1e6).toFixed(1)}M` : idr(n); };
+const greeting = () => { const hour = new Date().getHours(); return `Good ${hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'}, operator`; };
+function tween(el, to, format) {
+  const from = el._v ?? 0, reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  el._v = to;
+  cancelAnimationFrame(el._raf);
+  if (from === to || reduce) { el.textContent = format(to); return; }
+  const start = performance.now();
+  const tick = now => { const p = Math.min(1, (now - start) / 700); el.textContent = format(p === 1 ? to : from + (to - from) * (1 - (1 - p) ** 3)); if (p < 1) el._raf = requestAnimationFrame(tick); };
+  el._raf = requestAnimationFrame(tick);
+}
+const dayDelta = (timestamp, now) => { const days = Math.round(Math.abs(timestamp - now) / 86400); return days < 1 ? 'under a day' : `${days} day${days === 1 ? '' : 's'}`; };
 const utcDate = timestamp => `${new Date(timestamp * 1000).toLocaleString('en-GB', { timeZone: 'UTC' })} UTC`;
 async function readReportingStatus() {
   if (!safeguards) return { safeguards: false };
@@ -83,10 +99,14 @@ function renderReporting() {
     : state.purchasesPaused ? 'Purchases paused by operator' : state.overdue ? 'Report overdue — purchases blocked' : 'Reporting up to date';
   const sourceNote = verification.required ? verification.demo ? 'Monthly figures must pass an automatic check using sample data.' : 'Monthly figures must be approved by the data-checking service.' : 'Monthly figures are supplied by the operator.';
   const detail = state?.safeguards ? `<p>Last report: ${state.lastPeriod ? periodLabel(state.lastPeriod) : 'None yet'}. Next required: <strong>${periodLabel(state.nextReportingPeriod)}</strong>.</p><p>Reporting opens: ${utcDate(state.reportingOpensAt)}<br>Due by: ${utcDate(state.reportDueAt)}</p><p>Claims and transfers remain available. ${sourceNote}</p>` : '<p>Monthly deadlines and purchase pausing require a version 2 or later contract.</p>';
-  for (const id of ['reporting-status', 'operator-reporting-status']) $(`#${id}`).innerHTML = `<h2>${status}</h2>${detail}`;
+  // The operator lab's #operator-reporting-status is drawn as a schedule by renderOperatorOverview().
+  $('#reporting-status').innerHTML = `<h2>${status}</h2>${detail}`;
   $('#reporting-controls').hidden = !state?.safeguards;
   $('#simulation-clock').hidden = !simulation;
-  setActionButton($('#pause-purchases'), 'pause', wrongNetwork() ? switchLabel() : state?.purchasesPaused ? 'Remove manual purchase pause' : 'Pause purchases', Boolean(state?.safeguards && isOperator() && !state.statusUnavailable));
+  const pauseSwitch = $('#pause-purchases');
+  pauseSwitch.setAttribute('aria-checked', String(!state?.purchasesPaused));
+  pauseSwitch.disabled = !(state?.safeguards && isOperator() && !state.statusUnavailable) || Boolean(ui.busy);
+  pauseSwitch.classList.toggle('is-busy', ui.busy === 'pause');
 }
 
 function errorMessage(error) {
@@ -131,7 +151,7 @@ function renderToasts() {
 }
 
 // Chain data as display items
-const tones = { Bought: ['BUY', 'Purchase'], Report: ['kWh', 'Monthly report'], Claimed: ['Rp', 'Claim'], Sent: ['OUT', 'Transfer'], Received: ['IN', 'Transfer'], Pause: ['II', 'Purchase controls'] };
+const tones = { Bought: ['BUY', 'Purchase'], Report: ['kWh', 'Monthly report'], Claimed: ['Rp', 'Claim'], Sent: ['OUT', 'Transfer'], Received: ['IN', 'Transfer'], Pause: ['II', 'Purchase controls'], Withdrawn: ['Rp', 'Withdrawal'] };
 const reports = () => (state?.logs ?? []).filter(log => log.name === 'ReportPublished').map(log => ({
   period: Number(log.args.period), kwh: Number(log.args.kwh), costs: Number(log.args.costsIdr), reserve: Number(log.args.reserveIdr),
   deposited: BigInt(log.args.deposited), hash: log.transactionHash, block: log.blockNumber,
@@ -142,6 +162,7 @@ function activity() {
     if (log.name === 'SharesPurchased') return { ...item, kind: 'Bought', mine: same(a.buyer, address), title: `${cap(nameFor(a.buyer))} bought ${plural(Number(a.shares), 'Sol Coin')}`, wei: BigInt(a.paid) };
     if (log.name === 'ReportPublished') return { ...item, kind: 'Report', mine: false, title: `${periodLabel(a.period)} report · ${fmt(a.kwh)} kWh`, wei: BigInt(a.deposited) };
     if (log.name === 'PurchasesPauseChanged') return { ...item, kind: 'Pause', mine: false, title: a.paused ? 'Operator paused purchases' : 'Operator removed manual pause' };
+    if (log.name === 'ProceedsWithdrawn') return { ...item, kind: 'Withdrawn', mine: false, title: 'Operator withdrew sale proceeds', wei: BigInt(a.amount) };
     if (log.name === 'RevenueClaimed') return { ...item, kind: 'Claimed', mine: same(a.holder, address), title: `${cap(nameFor(a.holder))} claimed income`, wei: BigInt(a.amount) };
     if (log.name === 'Transfer' && same(a.from, address)) return { ...item, kind: 'Sent', mine: true, title: `You sent ${plural(Number(a.value), 'Sol Coin')} to ${nameFor(a.to)}`, shares: Number(a.value) };
     if (log.name === 'Transfer' && same(a.to, address)) return { ...item, kind: 'Received', mine: true, title: `${cap(nameFor(a.from))} sent you ${plural(Number(a.value), 'Sol Coin')}`, shares: Number(a.value) };
@@ -192,6 +213,8 @@ function showPage() {
   });
   closeMenu();
   window.scrollTo({ top: 0, behavior: 'instant' });
+  fadeInPage($(`#${page}-page`)); reveal.replay($(`#${page}-page`));
+  if (page === 'how') lightHowSteps(); else stopHowSteps();
 }
 function render() {
   renderHeader(); renderProject(); renderPortfolio(); renderOperator(); renderReporting(); renderVerification(); renderMenu(); renderModal(); milestoneScreen.render();
@@ -352,14 +375,16 @@ function breakdown() {
 }
 function renderBreakdown() {
   if (!state || !isOperator()) return;
-  const r = breakdown(), width = value => `${r.receipts > 0 ? Math.max(0, Math.min(100, value / r.receipts * 100)) : 0}%`;
+  const r = breakdown(), share = value => r.receipts > 0 ? Math.max(0, Math.min(100, value / r.receipts * 100)) : 0;
   $('#bd-receipts-note').textContent = `${fmt(r.kwh)} kWh × ${idr(TARIFF_IDR)}`;
   $('#bd-receipts').textContent = idr(r.receipts);
   $('#bd-costs').textContent = idr(r.costs);
   $('#bd-reserve').textContent = idr(r.reserve);
-  $('#bar-costs').style.width = width(r.costs);
-  $('#bar-reserve').style.width = width(r.reserve);
-  $('#bar-dist').style.width = width(Math.max(0, r.dist));
+  $('#bd-holders').textContent = idr(Math.max(0, r.dist));
+  const costsPct = share(r.costs), reservePct = Math.min(100 - costsPct, share(r.reserve));
+  $('#st-donut').style.setProperty('--a', `${costsPct}%`);
+  $('#st-donut').style.setProperty('--b', `${costsPct + reservePct}%`);
+  $('#st-pct').textContent = `${Math.round(share(Math.max(0, r.dist)))}%`;
   $('#bd-ok').hidden = !r.ok;
   $('#bd-bad').hidden = r.ok;
   $('#bd-bad').textContent = r.bad;
@@ -387,7 +412,6 @@ function renderOperator() {
     return;
   }
   if (!state) return;
-  $('#op-address').textContent = short(address);
   const base = state.safeguards ? state.nextReportingPeriod : state.lastPeriod ? nextPeriod(state.lastPeriod) : currentPeriod();
   const options = state.safeguards ? [base] : [base, nextPeriod(base), nextPeriod(nextPeriod(base))], select = $('#report-period');
   if (select.dataset.options !== options.join()) {
@@ -399,8 +423,12 @@ function renderOperator() {
   const all = reports(), last = all.at(-1);
   $('#last-published-note').textContent = last ? `Last published: ${periodLabel(last.period)}. Months must go in order.` : 'No reports yet. Start with your first month of production.';
   renderBreakdown();
+  renderQuickFill(last);
+  renderOperatorOverview(all);
+  $('#reports-count').textContent = all.length ? plural(all.length, 'report') : '';
+  const sum = key => all.reduce((total, r) => total + r[key], 0), sumDeposited = all.reduce((total, r) => total + r.deposited, 0n);
   $('#reports-table').innerHTML = all.length
-    ? `<div class="table-scroll"><table class="report-table"><thead><tr><th scope="col">Month</th><th scope="col">kWh</th><th scope="col">Receipts</th><th scope="col">Costs</th><th scope="col">Reserve</th><th scope="col">Distributed</th><th scope="col">Per Sol Coin</th><th scope="col"><span class="visually-hidden">Receipt</span></th></tr></thead><tbody>${all.reverse().map(r => `<tr><td>${periodLabel(r.period)}</td><td>${fmt(r.kwh)}</td><td>${idr(r.kwh * TARIFF_IDR)}</td><td>${idr(r.costs)}</td><td>${idr(r.reserve)}</td><td>${demoIdr(r.deposited)}</td><td>${demoIdr(r.deposited / 1000n)}</td><td>${receipt(r, `${periodLabel(r.period)} report`)}</td></tr>`).join('')}</tbody></table></div>`
+    ? `<div class="op-reports">${[...all].reverse().map(reportRow).join('')}</div>${all.length > 1 ? `<div class="op-total"><span>Total across ${plural(all.length, 'report')}</span><span><b>${fmt(sum('kwh'))} kWh</b> &nbsp;·&nbsp; <b>${demoIdr(sumDeposited)}</b> distributed</span></div>` : ''}`
     : `<div class="feed-empty"><div class="feed-empty-title">No reports yet</div><p>Your first monthly report will appear here once it's published. Shareholders can claim as soon as it confirms.</p></div>`;
   const available = state.milestones?.available ?? state.proceeds;
   const hasProceeds = available > 0n;
@@ -408,6 +436,77 @@ function renderOperator() {
   $('#proceeds-eth').textContent = eth(available);
   $('#proceeds-note').textContent = state.milestones ? `Approved funding available to withdraw. ${eth(state.milestones.held - available)} remains locked pending milestone approval.` : 'Funding received from Sol Coin purchases. This deployment has no milestone approval requirement.';
   setActionButton($('#withdraw-button'), 'withdraw', wrongNetwork() ? switchLabel() : hasProceeds ? 'Withdraw to operator wallet' : 'Nothing to withdraw', wrongNetwork() || hasProceeds);
+  const recent = activity().filter(item => item.kind in opIcons).slice(0, 6);
+  $('#op-feed').innerHTML = recent.length ? `<div>${recent.map(activityRow).join('')}</div>` : `<p class="card-text">Purchases, reports, claims and withdrawals will show up here.</p>`;
+}
+function reportRow(r) {
+  const receipts = r.kwh * TARIFF_IDR, pct = value => receipts > 0 ? Math.max(0, Math.min(100, value / receipts * 100)) : 0;
+  const costs = pct(r.costs), reserve = Math.min(100 - costs, pct(r.reserve)), holders = Math.min(100 - costs - reserve, pct(Number(r.deposited) / 1e9));
+  const year = Math.floor(r.period / 100), month = new Date(year, r.period % 100 - 1, 1).toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+  return `<div class="op-rep"><div class="op-cal" aria-hidden="true"><span>${month}</span><b>${String(year).slice(2)}</b></div>`
+    + `<div class="op-rep-t">${periodLabel(r.period)}<small>${fmt(r.kwh)} kWh</small></div>`
+    + `<div class="op-rep-bar"><div class="op-minibar" aria-hidden="true"><i style="width:${costs}%"></i><i style="width:${reserve}%"></i><i style="width:${holders}%"></i></div><div class="op-minibar-l">${Math.round(pct(Number(r.deposited) / 1e9))}% to shareholders</div></div>`
+    + `<div class="op-rep-amt">${demoIdr(r.deposited)}<small>${demoIdr(r.deposited / 1000n)} / coin</small></div>${receipt(r, `${periodLabel(r.period)} report`)}</div>`;
+}
+const opIcons = { Bought: 'i-sun', Report: 'i-doc', Claimed: 'i-check', Pause: 'i-chain', Withdrawn: 'i-wallet' };
+function activityRow(item) {
+  const url = txUrl(item.hash), tag = url ? `a href="${url}" target="_blank" rel="noopener noreferrer"` : 'div';
+  return `<${tag} class="op-act"><span class="op-act-ic k-${item.kind}"><svg class="icon" aria-hidden="true"><use href="#${opIcons[item.kind]}" /></svg></span><div class="op-act-t">${esc(item.title)}<small>${when(item)}</small></div>${item.wei === undefined ? '' : `<span class="op-act-v">${idrCompact(item.wei)}</span>`}</${url ? 'a' : 'div'}>`;
+}
+// Quick-fill chips for generation, based on the last published month.
+function renderQuickFill(last) {
+  const chips = $('#kwh-chips');
+  chips.hidden = !last;
+  if (!last) { chips.innerHTML = ''; return; }
+  const html = [[`Last month · ${fmt(last.kwh)}`, last.kwh], ['+5%', Math.round(last.kwh * 1.05)], ['−5%', Math.round(last.kwh * .95)]].map(([label, value]) => `<button type="button" data-kwh="${value}">${label}</button>`).join('');
+  if (chips.dataset.html !== html) { chips.innerHTML = html; chips.dataset.html = html; }
+}
+// Header, overview stats, reporting schedule and purchase state on the operator page.
+function renderOperatorOverview(all) {
+  const s = state, ok = s.safeguards && !s.statusUnavailable, waiting = ok && s.timestamp < s.reportingOpensAt;
+  const sold = TOTAL - s.available, buyers = new Set(s.logs.filter(log => log.name === 'SharesPurchased').map(log => String(log.args.buyer).toLowerCase())).size;
+  const month = s.safeguards ? periodLabel(s.nextReportingPeriod) : 'next';
+
+  $('#op-greeting').textContent = greeting();
+  $('#op-sub').innerHTML = !s.safeguards ? 'Publish a report once each production month has ended.'
+    : s.statusUnavailable ? 'Reporting status is unavailable. Refresh to try again.'
+    : s.overdue ? `Your <strong>${month}</strong> report is <strong>${dayDelta(s.reportDueAt, s.timestamp)}</strong> late. Purchases stay blocked until you publish it.`
+    : s.purchasesPaused ? `You've paused purchases. Claims and transfers still work.`
+    : waiting ? `Your ${month} report opens in <strong>${dayDelta(s.reportingOpensAt, s.timestamp)}</strong>. Everything else is running smoothly.`
+    : `Your ${month} report is ready to publish, due in <strong>${dayDelta(s.reportDueAt, s.timestamp)}</strong>.`;
+
+  tween($('#op-sold'), sold, fmt);
+  $('#op-cells').innerHTML = Array.from({ length: 25 }, (_, i) => `<i${i < Math.round(sold / 40) ? ' class="on"' : ''}></i>`).join('');
+  $('#op-sold-note').textContent = `${plural(buyers, 'investor')} · ${idr(sold * Number(SHARE_PRICE / GWEI))} raised`;
+  tween($('#op-income'), Number(s.revenue) / 1e9, idr);
+  const points = all.slice(-6).map(r => Number(r.deposited) / 1e9), low = Math.min(...points), span = Math.max(...points) - low;
+  const xy = points.map((v, i) => [i / (points.length - 1) * 120, span ? 26 - (v - low) / span * 22 : 15]);
+  $('#op-spark').innerHTML = points.length > 1
+    ? `<defs><linearGradient id="op-sg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#E95C05" stop-opacity=".28" /><stop offset="1" stop-color="#E95C05" stop-opacity="0" /></linearGradient></defs><path d="M${xy.map(p => p.join(' ')).join(' L')} L120 30 L0 30Z" fill="url(#op-sg)" /><path d="M${xy.map(p => p.join(' ')).join(' L')}" fill="none" stroke="#E95C05" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />`
+    : '<path d="M0 22 L120 22" fill="none" stroke="#E6C9B4" stroke-width="2" stroke-dasharray="3 5" stroke-linecap="round" vector-effect="non-scaling-stroke" />';
+  $('#op-income-note').textContent = all.length ? `${plural(all.length, 'report')} · ${demoIdr(all.at(-1).deposited / 1000n)} per Sol Coin latest` : 'No reports published yet';
+  tween($('#op-held'), Number(s.proceeds) / 1e9, idr);
+  $('#op-held-note').textContent = s.proceeds > 0n ? `Ready to withdraw · ${eth(s.proceeds)}` : 'Nothing waiting';
+
+  const [tone, label] = !s.safeguards ? ['muted', 'Not tracked'] : s.statusUnavailable ? ['bad', 'Unavailable']
+    : s.overdue ? ['bad', 'Overdue'] : s.purchasesPaused ? ['warn', 'Paused'] : ['ok', 'On track'];
+  $('#op-state').dataset.tone = tone;
+  $('#op-state-text').textContent = label;
+  const progress = ok ? Math.max(0, Math.min(1, (s.timestamp - s.reportingOpensAt) / (s.reportDueAt - s.reportingOpensAt))) : 0;
+  $('#op-track-fill').style.width = `${progress * 100}%`;
+  $('#op-track-dot').style.left = `${progress * 100}%`;
+  $('#op-track-open').textContent = ok ? `Opens ${utcDay(s.reportingOpensAt)}` : '';
+  $('#op-track-due').textContent = ok ? `Due ${utcDay(s.reportDueAt)}` : '';
+  $('#report-window-note').textContent = !ok ? '' : waiting ? `Opens ${utcShort(s.reportingOpensAt)}` : `Due ${utcShort(s.reportDueAt)}`;
+
+  const step = (cls, title, note, time, mark = '') => `<li class="${cls}"><span class="sched-dot">${mark}</span><div><h3>${title}</h3><p>${note}</p></div><time>${time}</time></li>`;
+  $('#operator-reporting-status').innerHTML = s.safeguards
+    ? `<ol class="sched">${s.lastPeriod ? step('done', `${periodLabel(s.lastPeriod)} report`, 'Published and claimable', 'Done', '<svg class="icon" aria-hidden="true"><use href="#i-check" /></svg>') : ''}`
+      + step(s.overdue ? 'late' : 'now', `${month} report`, s.overdue ? `${dayDelta(s.reportDueAt, s.timestamp)} overdue` : waiting ? `Opens in ${dayDelta(s.reportingOpensAt, s.timestamp)}` : `Open now · due in ${dayDelta(s.reportDueAt, s.timestamp)}`, utcDay(waiting ? s.reportingOpensAt : s.reportDueAt))
+      + step('', `${periodLabel(nextPeriod(s.nextReportingPeriod))} report`, 'Opens after the month ends', utcDay(utcMonthStart(nextPeriod(nextPeriod(s.nextReportingPeriod))))) + '</ol>'
+    : '<p class="card-text">Monthly deadlines and purchase pausing require a version 2 contract.</p>';
+  $('#purchase-state').textContent = s.purchasesPaused ? 'Purchases paused' : s.overdue ? 'Purchases blocked' : 'Accepting purchases';
+  $('#purchase-state-note').textContent = s.purchasesPaused ? 'Paused by you. Claims still work.' : s.overdue ? 'Report overdue. Publish it to reopen sales.' : 'Investors can buy Sol Coins.';
 }
 function renderMenu() {
   if (!address) { closeMenu(); return; }
@@ -465,7 +564,7 @@ const TOTAL = 1000, COLS = 40;
 const ledgerEl = $('#tiles'), tipEl = $('#tip');
 const tileEls = Array.from({ length: TOTAL }, () => document.createElement('i'));
 ledgerEl.append(...tileEls);
-const ledger = { kinds: [], geo: null, mx: -1e4, my: -1e4, tx: -1e4, ty: -1e4, rippling: false, painting: false, mine: undefined, owner: undefined, reports: undefined };
+const ledger = { kinds: [], geo: null, tx: -1e4, ty: -1e4, hover: -1, rippling: false, painting: false, mine: undefined, owner: undefined, reports: undefined };
 function renderLedger() {
   if (!state) return;
   const sold = TOTAL - state.available, mine = address && !isOperator() ? Math.min(state.balance, sold) : 0;
@@ -504,19 +603,21 @@ function showTip(text, x, y) {
   tipEl.textContent = text; tipEl.classList.add('on');
   tipEl.style.left = `${Math.min(Math.max(8, x + 14), innerWidth - tipEl.offsetWidth - 8)}px`; tipEl.style.top = `${y + 18}px`;
 }
-// Tiles near the pointer lift (scale, ring, shadow, colour) along a smooth bell curve. The pointer is eased too, so the lift trails the cursor instead of snapping to it.
+// The tile under the pointer grows and brightens (--f); its neighbours brighten a little along a soft falloff (--h). Both ease in and out frame by frame.
+const easeTo = (cur, target) => Math.abs(target - cur) < .003 ? target : cur + (target - cur) * .25;
 function ripple() {
   ledger.geo ??= tileEls.map(tile => ({ x: tile.offsetLeft + tile.offsetWidth / 2, y: tile.offsetTop + tile.offsetHeight / 2 }));
-  const radius = 120, near = ledger.mx > -1e3;
-  if (near) { ledger.mx += (ledger.tx - ledger.mx) * .3; ledger.my += (ledger.ty - ledger.my) * .3; }
-  let moving = near && Math.hypot(ledger.tx - ledger.mx, ledger.ty - ledger.my) > .5;
+  const radius = (ledger.geo[1].x - ledger.geo[0].x) * 2.2, near = ledger.tx > -1e3;
+  let moving = false;
   tileEls.forEach((tile, i) => {
-    const g = ledger.geo[i], t = near ? Math.max(0, 1 - Math.hypot(g.x - ledger.mx, g.y - ledger.my) / radius) : 0;
-    const target = t * t * (3 - 2 * t), cur = tile._lift ?? 0, next = Math.abs(target - cur) < .003 ? target : cur + (target - cur) * .22;
-    if (next === cur) return;
-    tile._lift = next; moving = true;
-    if (next === 0) { tile.style.removeProperty('--h'); tile.style.scale = ''; tile.style.zIndex = ''; return; }
-    tile.style.setProperty('--h', next.toFixed(3)); tile.style.scale = (1 + .5 * next).toFixed(3); tile.style.zIndex = String(1 + Math.round(next * 10));
+    const g = ledger.geo[i], t = near ? Math.max(0, 1 - Math.hypot(g.x - ledger.tx, g.y - ledger.ty) / radius) : 0;
+    const glow = easeTo(tile._glow ?? 0, t * t * (3 - 2 * t)), focus = easeTo(tile._focus ?? 0, i === ledger.hover ? 1 : 0);
+    if (glow === (tile._glow ?? 0) && focus === (tile._focus ?? 0)) return;
+    tile._glow = glow; tile._focus = focus; moving = true;
+    if (!glow && !focus) { tile.style.removeProperty('--f'); tile.style.filter = tile.style.scale = tile.style.zIndex = ''; return; }
+    tile.style.setProperty('--f', focus.toFixed(3));
+    tile.style.filter = `brightness(${(1 + glow * .2 + focus * .3).toFixed(3)}) saturate(${(1 + focus * .2).toFixed(3)})`;
+    tile.style.scale = (1 + 1.4 * focus).toFixed(3); tile.style.zIndex = String(1 + Math.round(focus * 10));
   });
   if (moving) requestAnimationFrame(ripple); else ledger.rippling = false;
 }
@@ -529,14 +630,13 @@ ledgerEl.addEventListener('pointerdown', event => {
 });
 ledgerEl.addEventListener('pointermove', event => {
   const r = ledgerEl.getBoundingClientRect(), i = tileAt(event.clientX, event.clientY), kind = ledger.kinds[i];
-  ledger.tx = event.clientX - r.left; ledger.ty = event.clientY - r.top;
-  if (ledger.mx < -1e3) { ledger.mx = ledger.tx; ledger.my = ledger.ty; }
+  ledger.tx = event.clientX - r.left; ledger.ty = event.clientY - r.top; ledger.hover = i;
   if (ledger.painting) paintTo(i);
   const name = `Sol Coin #${String(i + 1).padStart(4, '0')}`;
   showTip(kind === 'mine' ? `${name} · Yours` : kind === 'sold' ? `${name} · Held by another investor` : `${name} · Available · ${idr(100000)}`, event.clientX, event.clientY);
   if (event.pointerType === 'mouse') kickRipple();
 });
-ledgerEl.addEventListener('pointerleave', () => { ledger.mx = ledger.my = ledger.tx = ledger.ty = -1e4; tipEl.classList.remove('on'); kickRipple(); });
+ledgerEl.addEventListener('pointerleave', () => { ledger.tx = ledger.ty = -1e4; ledger.hover = -1; tipEl.classList.remove('on'); kickRipple(); });
 for (const type of ['pointerup', 'pointercancel']) ledgerEl.addEventListener(type, () => { ledger.painting = false; });
 addEventListener('resize', () => { ledger.geo = null; });
 
@@ -549,6 +649,39 @@ function burst(x, y) {
     dot.animate([{ transform: 'translate(0, 0) scale(1)', opacity: 1 }, { transform: `translate(${Math.cos(angle) * speed}px, ${Math.sin(angle) * speed - 60}px) scale(.2)`, opacity: 0 }], { duration: 900 + Math.random() * 400, easing: 'cubic-bezier(.2, .8, .3, 1)' }).onfinish = () => dot.remove();
   }
 }
+
+// Page motion: content blocks fade up into view, and buttons flash sunrays on hover
+const reveal = createReveal('.home-copy, .wall-stat, .project-hero, .stat, .card, .buy-card, .page-head, .tile, .empty-card, .claim-card, .claim-empty, .breakdown, .how-title, .how-lede, .example, .example-result, .how-note');
+initButtonRays();
+
+// How it works: the five steps light up one by one like lamps, then the worked example counts up to the payout for the chosen holding
+const EXAMPLE_PER_COIN = 1189; // Rp per Sol Coin in the worked example
+const flowEl = $('.flow'), flowSteps = [...flowEl.children], heldQty = $('#held-qty'), heldAmount = $('#held-amount');
+const how = { timers: [], lampsDone: false, inView: false, counted: false };
+if (!reduceMotion) flowEl.classList.add('lamps');
+function lightHowSteps() {
+  stopHowSteps(); how.lampsDone = false; how.counted = false;
+  if (reduceMotion) { flowSteps.forEach(step => step.classList.add('lit')); how.lampsDone = true; countHeld(); return; }
+  tick(heldAmount, 0, { duration: 0, format: idr });
+  flowSteps.forEach((step, i) => { step.classList.remove('lit'); how.timers.push(setTimeout(() => step.classList.add('lit'), 250 + i * 380)); });
+  how.timers.push(setTimeout(() => { how.lampsDone = true; countHeld(); }, 250 + flowSteps.length * 380 + 150));
+}
+function stopHowSteps() { how.timers.forEach(clearTimeout); how.timers = []; }
+function countHeld() { if (how.lampsDone && how.inView && !how.counted) { how.counted = true; renderHeld(1200); } }
+function renderHeld(duration = 450) {
+  const qty = Math.min(1000, whole(heldQty.value)), amount = qty * EXAMPLE_PER_COIN;
+  $('#held-dec').disabled = qty <= 1; $('#held-inc').disabled = qty >= 1000;
+  $('#held-eth').textContent = `${eth(BigInt(amount) * GWEI)}, ready to claim`;
+  $('#held-live').textContent = `${plural(qty, 'Sol Coin')} would earn ${idr(amount)}`;
+  if (how.counted) tick(heldAmount, amount, { duration, format: idr });
+}
+const setHeld = qty => { heldQty.value = String(Math.min(1000, Math.max(1, qty))); how.counted = true; renderHeld(); };
+new IntersectionObserver(([entry]) => { how.inView = entry.isIntersecting; countHeld(); }, { threshold: .4 }).observe($('.example-result'));
+heldQty.oninput = () => { heldQty.value = digits(heldQty.value, 4); how.counted = true; renderHeld(); };
+heldQty.onchange = () => setHeld(whole(heldQty.value));
+$('#held-dec').onclick = () => setHeld(whole(heldQty.value) - 1);
+$('#held-inc').onclick = () => setHeld(whole(heldQty.value) + 1);
+renderHeld();
 
 // Income: how a month's sunshine becomes money in your wallet (My Sol Coins page)
 const inc = { whatIf: null, run: 0, played: false };
@@ -1018,6 +1151,12 @@ $('#send-form').onsubmit = async event => {
 $('#report-form').oninput = event => {
   if (event.target.matches('input')) event.target.value = digits(event.target.value, 10);
   renderBreakdown();
+};
+$('#kwh-chips').onclick = event => {
+  const chip = event.target.closest('[data-kwh]');
+  if (!chip) return;
+  $('#report-kwh').value = chip.dataset.kwh;
+  $('#report-form').dispatchEvent(new Event('input'));
 };
 $('#report-form').onsubmit = event => {
   event.preventDefault();

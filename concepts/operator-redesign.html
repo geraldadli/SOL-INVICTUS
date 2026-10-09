@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#FFF4E4" />
+<title>Sol Invictus — Concept: Operator, refined</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Young+Serif&display=swap" />
+<style>
+:root{
+  --cream:#FFF4E4; --white:#fff; --ink:#2B0A12; --ink-soft:#5A1E22; --muted:#7A2E2A; --muted-2:#9A5A50;
+  --maroon:#83092D; --maroon-deep:#6E0726; --crimson:#C8203C; --orange:#E95C05; --sun:#FABD3D;
+  --peach:#FCE7CF; --apricot:#F8D8B2; --line:#E6C9B4; --hairline:rgba(131,9,45,.09);
+  --green:#2E7D57; --green-ink:#1F6B47; --green-soft:#DDEFE3; --error:#9E1230; --error-soft:#FBE1E3;
+  --sunset:linear-gradient(135deg,#FABD3D 0%,#F59A2B 55%,#E95C05 100%);
+  --serif:'Young Serif',Georgia,serif; --sans:'Plus Jakarta Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --card:rgba(255,255,255,.78); --shadow:0 1px 0 rgba(255,255,255,.8) inset,0 10px 30px -14px rgba(131,9,45,.22),0 2px 6px -2px rgba(131,9,45,.08);
+  --gutter:clamp(14px,4vw,48px);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;min-height:100vh;color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;font-variant-ligatures:no-contextual;
+  background:
+    radial-gradient(520px 380px at 92% -40px,rgba(250,189,61,.55),transparent 70%),
+    radial-gradient(600px 420px at -5% 105%,rgba(240,150,120,.25),transparent 70%),
+    linear-gradient(180deg,#F8C99A 0,#FBDBB9 260px,#FDE9D3 620px,var(--cream) 100%) fixed;}
+button,input,select{font:inherit;color:inherit}
+h1,h2,h3,p{margin:0}
+.num{font-variant-numeric:tabular-nums}
+.ic{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* top bar (mirrors the app) */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1200px;margin:0 auto;padding:14px var(--gutter)}
+.brand{display:flex;align-items:center;gap:9px;font:400 21px var(--serif)}
+.brand i{width:28px;height:28px;border-radius:50%;background:var(--sunset);box-shadow:0 0 0 3px rgba(255,255,255,.5)}
+.nav{display:flex;gap:4px;padding:5px;border-radius:999px;background:rgba(255,255,255,.6);backdrop-filter:blur(8px)}
+.nav a{padding:8px 14px;border-radius:999px;font-size:14px;font-weight:600;color:var(--ink-soft);text-decoration:none}
+.nav a.on{background:var(--white);color:var(--maroon);box-shadow:0 1px 4px rgba(131,9,45,.12)}
+@media(max-width:759px){.nav{display:none}}
+
+.wrap{max-width:1200px;margin:0 auto;padding:10px var(--gutter) 72px}
+
+/* header */
+.head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px;margin-top:10px}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--orange)}
+.eyebrow i{width:7px;height:7px;border-radius:50%;background:var(--orange);box-shadow:0 0 0 4px rgba(233,92,5,.16)}
+h1{margin-top:8px;font:400 clamp(34px,4.4vw,52px)/1.04 var(--serif);letter-spacing:-.01em}
+.sub{margin-top:8px;max-width:520px;font-size:15px;line-height:1.5;color:var(--muted)}
+.who{display:flex;align-items:center;gap:10px;padding:6px 14px 6px 6px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.6);font:500 12px var(--mono);color:var(--ink-soft)}
+.who b{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--maroon);color:var(--sun);font:800 11px var(--sans)}
+
+/* cards */
+.card{position:relative;padding:22px;border:1px solid rgba(255,255,255,.7);border-radius:22px;background:var(--card);backdrop-filter:blur(10px);box-shadow:var(--shadow)}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.card-head h2{display:flex;align-items:center;gap:10px;font:400 20px var(--serif)}
+.chip-ic{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:var(--peach);color:var(--maroon)}
+.hint{font-size:12px;font-weight:600;color:var(--muted)}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:26px}
+.stat{padding:18px 18px 16px;border-radius:20px;transition:transform .25s,box-shadow .25s}
+.stat:hover{transform:translateY(-2px)}
+.stat-top{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--muted)}
+.stat-top .chip-ic{width:26px;height:26px;border-radius:8px}
+.stat-top .ic{width:15px;height:15px}
+.stat-val{margin-top:12px;font:400 30px/1.05 var(--serif);letter-spacing:-.01em}
+.stat-val small{font:600 13px var(--sans);color:var(--muted)}
+.stat-note{margin-top:6px;font-size:12px;font-weight:500;color:var(--muted)}
+.coinrow{display:grid;grid-template-columns:repeat(25,1fr);gap:2px;margin-top:12px}
+.coinrow i{height:10px;border-radius:3px;background:var(--peach)}
+.coinrow i.f{background:var(--sunset)}
+.spark{display:block;width:100%;height:30px;margin-top:10px}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:3px 10px 3px 8px;border-radius:999px;background:var(--green-soft);color:var(--green-ink);font:700 12px var(--sans)}
+.pill i{width:7px;height:7px;border-radius:50%;background:var(--green)}
+.tl{position:relative;height:6px;margin-top:14px;border-radius:99px;background:var(--peach)}
+.tl span{position:absolute;inset:0 auto 0 0;width:38%;border-radius:inherit;background:var(--sunset)}
+.tl b{position:absolute;top:50%;left:38%;width:14px;height:14px;transform:translate(-50%,-50%);border:3px solid #fff;border-radius:50%;background:var(--orange);box-shadow:0 1px 4px rgba(131,9,45,.3)}
+.tl-labels{display:flex;justify-content:space-between;margin-top:7px;font-size:11px;font-weight:600;color:var(--muted)}
+
+/* grid */
+.grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(300px,1fr);gap:14px;align-items:start;margin-top:14px}
+.col{display:flex;flex-direction:column;gap:14px;min-width:0}
+
+/* form + statement */
+.form-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px}
+.step>div:last-child{min-width:0}
+.steps{display:flex;flex-direction:column;gap:18px}
+.step{display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px}
+.step-n{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--peach);color:var(--maroon);font:800 12px var(--sans)}
+.step-t{margin-bottom:8px;font-size:13px;font-weight:800}
+.step-t small{display:block;margin-top:1px;font-weight:500;color:var(--muted)}
+.field{position:relative;margin-top:8px}
+.field label{display:block;margin-bottom:5px;font-size:12px;font-weight:700;color:var(--muted)}
+.inp{display:flex;align-items:center;gap:8px;height:50px;padding:0 14px;border:1.5px solid var(--line);border-radius:14px;background:var(--white);transition:border-color .2s,box-shadow .2s}
+.inp:focus-within{border-color:var(--orange);box-shadow:0 0 0 4px rgba(233,92,5,.12)}
+.inp input,.inp select{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;font:600 16px var(--mono)}
+.inp select{font:700 15px var(--sans);appearance:none;cursor:pointer}
+.inp .u{font-size:12px;font-weight:700;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chips button{height:28px;padding:0 11px;border:1px solid var(--line);border-radius:99px;background:rgba(255,255,255,.7);font-size:12px;font-weight:700;color:var(--ink-soft);cursor:pointer;transition:all .15s}
+.chips button:hover{border-color:var(--orange);color:var(--maroon);background:#fff}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.locked{display:flex;align-items:center;justify-content:space-between;gap:10px;height:42px;padding:0 14px;border:1.5px dashed var(--line);border-radius:12px;background:rgba(255,244,228,.7);font:600 14px var(--mono)}
+.locked small{font:600 11px var(--sans);color:var(--muted)}
+
+.statement{position:relative;display:flex;flex-direction:column;padding:22px 20px 20px;border-radius:18px;background:#fff;box-shadow:0 12px 30px -16px rgba(131,9,45,.35),0 0 0 1px var(--hairline)}
+.statement::before{content:'';position:absolute;left:14px;right:14px;top:-1px;height:8px;background:radial-gradient(circle at 6px 0,var(--cream) 5px,transparent 5.5px) 0 0/16px 8px repeat-x}
+.st-label{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.donut-row{display:flex;flex-wrap:wrap;align-items:center;gap:14px 18px;margin-top:12px}
+.donut{position:relative;flex:none;width:112px;height:112px;border-radius:50%;background:conic-gradient(#D6B2A3 0 var(--a),#F0C48A var(--a) var(--b),var(--orange) var(--b) 100%);transition:background .3s}
+.donut::after{content:'';position:absolute;inset:15px;border-radius:50%;background:#fff;box-shadow:0 0 0 1px var(--hairline)}
+.donut-c{position:absolute;inset:0;z-index:1;display:grid;place-content:center;text-align:center}
+.donut-c b{font:400 22px/1 var(--serif);color:var(--maroon-deep)}
+.donut-c span{margin-top:3px;font-size:10px;font-weight:700;color:var(--muted)}
+.legend{flex:1 1 150px;min-width:0;display:flex;flex-direction:column;gap:9px;font-size:13px}
+.legend div{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.legend span{display:inline-flex;align-items:center;gap:7px;color:var(--ink-soft)}
+.legend i{width:9px;height:9px;border-radius:3px}
+.legend b{font:600 12px var(--mono)}
+.big{margin-top:18px;padding-top:16px;border-top:1px dashed var(--line)}
+.big small{display:block;font-size:12px;font-weight:700;color:var(--muted)}
+.big strong{display:block;margin-top:2px;font:400 clamp(30px,3.2vw,38px)/1.1 var(--serif);color:var(--maroon-deep)}
+.big em{display:block;margin-top:3px;font:500 12px var(--sans);font-style:normal;color:var(--muted)}
+.per{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding:11px 14px;border-radius:12px;background:var(--cream);font-size:13px;color:var(--ink-soft)}
+.per b{font:400 18px var(--serif);color:var(--ink)}
+.cta{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:54px;margin-top:16px;border:0;border-radius:999px;background:linear-gradient(180deg,#9A0F37,var(--maroon-deep));color:var(--cream);font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 10px 22px -10px rgba(131,9,45,.7),inset 0 1px 0 rgba(255,255,255,.18);transition:transform .15s,box-shadow .2s}
+.cta:hover{transform:translateY(-1px);box-shadow:0 14px 26px -10px rgba(131,9,45,.75),inset 0 1px 0 rgba(255,255,255,.18)}
+.cta:active{transform:translateY(0)}
+.fine{margin-top:10px;text-align:center;font-size:11.5px;color:var(--muted)}
+
+/* reports list */
+.rep{display:grid;grid-template-columns:52px minmax(0,1.1fr) minmax(0,1.3fr) auto auto;align-items:center;gap:14px;padding:12px 6px;border-top:1px solid var(--hairline);border-radius:12px;transition:background .15s}
+.rep:hover{background:rgba(252,231,207,.45)}
+.rep:first-of-type{border-top:0}
+.cal{display:grid;place-items:center;width:48px;height:52px;border-radius:12px;background:#fff;box-shadow:0 0 0 1px var(--hairline);overflow:hidden;text-align:center}
+.cal span{display:block;width:100%;padding:2px 0;background:var(--sunset);font-size:9px;font-weight:800;letter-spacing:.1em;color:#fff}
+.cal b{font:400 17px/1 var(--serif);padding-bottom:4px}
+.rep-t{font-size:14px;font-weight:700}
+.rep-t small{display:block;margin-top:2px;font-size:12px;font-weight:500;color:var(--muted)}
+.minibar{display:flex;height:6px;border-radius:99px;overflow:hidden;background:var(--peach)}
+.minibar i:nth-child(1){background:#D6B2A3}.minibar i:nth-child(2){background:#F0C48A}.minibar i:nth-child(3){background:var(--orange)}
+.minibar-l{margin-top:5px;font-size:11px;color:var(--muted)}
+.rep-amt{text-align:right;font:600 14px var(--mono)}
+.rep-amt small{display:block;font:500 11px var(--sans);color:var(--muted)}
+.link{display:inline-flex;align-items:center;gap:4px;height:32px;padding:0 11px;border-radius:10px;background:var(--cream);font-size:12px;font-weight:700;color:var(--ink-soft);text-decoration:none}
+.link:hover{background:var(--peach)}
+.total{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;margin-top:6px;padding:12px 8px 0;border-top:1px solid var(--line);font-size:12px;font-weight:700;color:var(--muted)}
+.total b{color:var(--ink);font:600 13px var(--mono)}
+@media(max-width:700px){.rep{grid-template-columns:48px 1fr auto}.rep .mb,.rep .link{display:none}}
+
+/* schedule */
+.vt{position:relative;margin:4px 0 0;padding:0;list-style:none}
+.vt li{position:relative;display:grid;grid-template-columns:22px 1fr auto;gap:12px;padding-bottom:18px}
+.vt li:last-child{padding-bottom:0}
+.vt li::before{content:'';position:absolute;left:10px;top:22px;bottom:0;width:2px;background:var(--line)}
+.vt li:last-child::before{display:none}
+.vt li.done::before{background:var(--green)}
+.dot{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;border:2px solid var(--line);background:#fff;color:#fff}
+.done .dot{border-color:var(--green);background:var(--green)}
+.now .dot{border-color:var(--orange);box-shadow:0 0 0 5px rgba(233,92,5,.14)}
+.now .dot::after{content:'';width:8px;height:8px;border-radius:50%;background:var(--orange)}
+.dot .ic{width:12px;height:12px;stroke-width:3}
+.vt h3{font-size:14px;font-weight:700}
+.vt p{margin-top:2px;font-size:12px;color:var(--muted)}
+.vt time{font-size:12px;font-weight:700;color:var(--ink-soft);text-align:right}
+.vt .now time{color:var(--orange)}
+.switch-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;padding:14px;border-radius:16px;background:var(--cream)}
+.switch-row h3{font-size:14px;font-weight:700}
+.switch-row p{margin-top:2px;font-size:12px;color:var(--muted)}
+.sw{position:relative;flex:none;width:46px;height:28px;border:0;border-radius:99px;background:var(--green);cursor:pointer;transition:background .2s}
+.sw::after{content:'';position:absolute;top:3px;left:21px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .2s}
+.sw[aria-checked="false"]{background:#D9C2B4}.sw[aria-checked="false"]::after{left:3px}
+.sim{margin-top:12px;font-size:12px;font-weight:700;color:var(--muted)}
+.sim summary{cursor:pointer}
+
+/* proceeds */
+.proceeds{color:var(--cream);background:linear-gradient(150deg,#8F0F35 0%,#6E0726 62%,#4A0519 100%);border-color:transparent;overflow:hidden}
+.proceeds::before{content:'';position:absolute;right:-60px;top:-60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(250,189,61,.45),transparent 68%)}
+.proceeds .card-head h2{color:var(--cream)}
+.proceeds .chip-ic{background:rgba(255,244,228,.14);color:var(--sun)}
+.proceeds p{position:relative;font-size:13px;line-height:1.5;color:#E9C9B8}
+.p-val{position:relative;margin-top:14px;font:400 36px/1.05 var(--serif)}
+.p-sub{position:relative;margin-top:3px;font-size:12px;color:#D9B8A6}
+.btn-sun{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:46px;margin-top:16px;border:0;border-radius:999px;background:var(--sun);color:var(--ink);font-size:14px;font-weight:800;cursor:pointer;transition:filter .15s}
+.btn-sun:hover{filter:brightness(1.06)}
+
+/* activity */
+.act{display:flex;flex-direction:column}
+.act-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--hairline)}
+.act-row:first-child{border-top:0;padding-top:2px}
+.act-ic{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;flex:none}
+.act-ic .ic{width:16px;height:16px}
+.k-buy{background:var(--peach);color:var(--maroon)}.k-rep{background:#FDEBC0;color:#9A5B00}.k-claim{background:var(--green-soft);color:var(--green-ink)}
+.act-t{flex:1;min-width:0;font-size:13px;font-weight:600}
+.act-t small{display:block;margin-top:2px;font-size:11.5px;font-weight:500;color:var(--muted)}
+.act-v{font:600 12px var(--mono);color:var(--ink-soft)}
+
+/* responsive */
+@media(max-width:1020px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:720px){.form-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:480px){.stats{grid-template-columns:minmax(0,1fr)}}
+
+/* gentle entrance */
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.card{animation:rise .5s both}.stats .card:nth-child(2){animation-delay:.05s}.stats .card:nth-child(3){animation-delay:.1s}.stats .card:nth-child(4){animation-delay:.15s}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.tag{position:fixed;right:14px;bottom:14px;z-index:5;padding:7px 12px;border-radius:99px;background:var(--ink);color:var(--cream);font-size:11px;font-weight:700;letter-spacing:.04em;opacity:.85}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h13v4"/><path d="M3 7v11a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2z"/><circle cx="16.5" cy="14.5" r="1"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-pie" viewBox="0 0 24 24"><path d="M21 12A9 9 0 1 1 12 3v9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v12M6 12l6 6 6-6M5 21h14"/></symbol>
+  <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M3 12h4l2-6 4 12 2-6h6"/></symbol>
+</svg>
+
+<header class="topbar">
+  <div class="brand"><i></i>Sol Invictus</div>
+  <nav class="nav"><a href="#">Home</a><a href="#">Project</a><a href="#">My Sol Coins</a><a href="#">How it works</a><a class="on" href="#">Operator</a></nav>
+  <div class="who"><b>OP</b>0x0000…0001</div>
+</header>
+
+<main class="wrap">
+  <div class="head">
+    <div>
+      <div class="eyebrow"><i></i>Operator console</div>
+      <h1>Good evening, operator</h1>
+      <p class="sub">Your September report opens in <strong>7 days</strong>. Everything else is running smoothly.</p>
+    </div>
+  </div>
+
+  <!-- Overview -->
+  <section class="stats" aria-label="Overview">
+    <div class="card stat">
+      <div class="stat-top"><span class="chip-ic"><svg class="ic"><use href="#i-sun"/></svg></span>Coins sold</div>
+      <div class="stat-val num"><span data-count="612">612</span><small> / 1,000</small></div>
+      <div class="coinrow" id="coinrow" aria-hidden="true"></div>
+      <div class="stat-note">14 investors · Rp61,200,000 raised</div>
+    </div>
+    <div class="card stat">
+      <div class="stat-top"><span class="chip-ic"><svg class="ic"><use href="#i-pulse"/></svg></span>Income distributed</div>
+      <div class="stat-val num">Rp<span data-count="3681000">3,681,000</span></div>
+      <svg class="spark" viewBox="0 0 120 30" preserveAspectRatio="none" aria-hidden="true">
+        <defs><linearGradient id="sg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#E95C05" stop-opacity=".28"/><stop offset="1" stop-color="#E95C05" stop-opacity="0"/></linearGradient></defs>
+        <path d="M0 24 L40 17 L80 20 L120 6 L120 30 L0 30Z" fill="url(#sg)"/>
+        <path d="M0 24 L40 17 L80 20 L120 6" fill="none" stroke="#E95C05" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+        <circle cx="120" cy="6" r="3" fill="#E95C05" vector-effect="non-scaling-stroke"/>
+      </svg>
+      <div class="stat-note">3 reports · Rp1,227.5 per Sol Coin latest</div>
+    </div>
+    <div class="card stat">
+      <div class="stat-top"><span class="chip-ic"><svg class="ic"><use href="#i-wallet"/></svg></span>Sale proceeds held</div>
+      <div class="stat-val num">Rp<span data-count="24500000">24,500,000</span></div>
+      <div class="stat-note" style="margin-top:14px">Ready to withdraw · 0.0245 simulated ETH</div>
+    </div>
+    <div class="card stat">
+      <div class="stat-top"><span class="chip-ic"><svg class="ic"><use href="#i-cal"/></svg></span>Reporting</div>
+      <div class="stat-val" style="font:700 17px var(--sans);margin-top:12px"><span class="pill"><i></i>On track</span></div>
+      <div class="tl" aria-hidden="true"><span></span><b></b></div>
+      <div class="tl-labels"><span>Opens 1 Oct</span><span>Due 16 Oct</span></div>
+    </div>
+  </section>
+
+  <div class="grid">
+    <div class="col">
+      <!-- Publish -->
+      <section class="card" id="publish">
+        <div class="card-head"><h2><span class="chip-ic"><svg class="ic"><use href="#i-bolt"/></svg></span>Publish monthly report</h2><span class="hint">Due 16 Oct 2026, 12:17 UTC</span></div>
+        <div class="form-grid">
+          <div class="steps">
+            <div class="step">
+              <div class="step-n">1</div>
+              <div>
+                <div class="step-t">Pick the month &amp; generation<small>Months must be reported in order.</small></div>
+                <div class="field" style="margin-top:0"><label for="m">Reporting month</label>
+                  <div class="inp"><select id="m"><option>September 2026</option></select><svg class="ic" style="color:var(--muted)"><use href="#i-cal"/></svg></div></div>
+                <div class="field"><label for="kwh">Electricity generated</label>
+                  <div class="inp"><input id="kwh" class="num" value="1265" inputmode="numeric" /><span class="u">kWh</span></div>
+                  <div class="chips" aria-label="Quick fill"><button type="button" data-kwh="1240">Last month · 1,240</button><button type="button" data-kwh="1300">+5%</button><button type="button" data-kwh="1180">−5%</button></div></div>
+                <div class="field"><label>Tariff</label><div class="locked"><span>Rp1,500 / kWh</span><small>Fixed in the contract</small></div></div>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-n">2</div>
+              <div>
+                <div class="step-t">Costs &amp; reserve<small>Deducted before shareholders are paid.</small></div>
+                <div class="two">
+                  <div class="field" style="margin-top:0"><label for="cost">Operating costs</label><div class="inp"><span class="u">Rp</span><input id="cost" class="num" value="420000" inputmode="numeric" /></div></div>
+                  <div class="field" style="margin-top:0"><label for="res">Maintenance reserve</label><div class="inp"><span class="u">Rp</span><input id="res" class="num" value="250000" inputmode="numeric" /></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="statement" aria-live="polite">
+            <div class="st-label">Statement preview</div>
+            <div class="donut-row">
+              <div class="donut" id="donut" style="--a:22%;--b:35%"><div class="donut-c"><b id="pct">65%</b><span>to holders</span></div></div>
+              <div class="legend">
+                <div><span><i style="background:#D6B2A3"></i>Costs</span><b id="l-cost">Rp420,000</b></div>
+                <div><span><i style="background:#F0C48A"></i>Reserve</span><b id="l-res">Rp250,000</b></div>
+                <div><span><i style="background:var(--orange)"></i>Holders</span><b id="l-dist">Rp1,227,500</b></div>
+              </div>
+            </div>
+            <div class="big">
+              <small>Amount to distribute</small>
+              <strong class="num" id="dist">Rp1,227,500</strong>
+              <em>from <span id="rec">Rp1,897,500</span> electricity receipts · <span id="eth">0.0012275</span> simulated ETH deposited</em>
+            </div>
+            <div class="per"><span>Per Sol Coin</span><b class="num" id="per">Rp1,227.5</b></div>
+            <button class="cta" type="button">Publish September report<svg class="ic"><use href="#i-arrow"/></svg></button>
+            <div class="fine">You'll confirm once in your wallet. Shareholders can claim right after.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Reports -->
+      <section class="card">
+        <div class="card-head"><h2><span class="chip-ic"><svg class="ic"><use href="#i-doc"/></svg></span>Published reports</h2><span class="hint">3 reports</span></div>
+        <div>
+          <div class="rep"><div class="cal"><span>AUG</span><b>26</b></div><div class="rep-t">August 2026<small>1,310 kWh</small></div>
+            <div class="mb"><div class="minibar"><i style="width:21%"></i><i style="width:12%"></i><i style="width:67%"></i></div><div class="minibar-l">67% to shareholders</div></div>
+            <div class="rep-amt num">Rp1,305,000<small>Rp1,305 / coin</small></div><a class="link" href="#">Receipt<svg class="ic" style="width:12px;height:12px"><use href="#i-ext"/></svg></a></div>
+          <div class="rep"><div class="cal"><span>JUL</span><b>26</b></div><div class="rep-t">July 2026<small>1,190 kWh</small></div>
+            <div class="mb"><div class="minibar"><i style="width:24%"></i><i style="width:14%"></i><i style="width:62%"></i></div><div class="minibar-l">62% to shareholders</div></div>
+            <div class="rep-amt num">Rp1,148,500<small>Rp1,148.5 / coin</small></div><a class="link" href="#">Receipt<svg class="ic" style="width:12px;height:12px"><use href="#i-ext"/></svg></a></div>
+          <div class="rep"><div class="cal"><span>JUN</span><b>26</b></div><div class="rep-t">June 2026<small>1,205 kWh</small></div>
+            <div class="mb"><div class="minibar"><i style="width:23%"></i><i style="width:14%"></i><i style="width:63%"></i></div><div class="minibar-l">63% to shareholders</div></div>
+            <div class="rep-amt num">Rp1,227,500<small>Rp1,227.5 / coin</small></div><a class="link" href="#">Receipt<svg class="ic" style="width:12px;height:12px"><use href="#i-ext"/></svg></a></div>
+        </div>
+        <div class="total"><span>Total across 3 reports</span><span><b>3,705 kWh</b> &nbsp;·&nbsp; <b>Rp3,681,000</b> distributed</span></div>
+      </section>
+    </div>
+
+    <div class="col">
+      <!-- Schedule -->
+      <section class="card">
+        <div class="card-head"><h2><span class="chip-ic"><svg class="ic"><use href="#i-cal"/></svg></span>Reporting schedule</h2></div>
+        <ol class="vt">
+          <li class="done"><span class="dot"><svg class="ic"><use href="#i-check"/></svg></span><div><h3>August report</h3><p>Published and claimable</p></div><time>Done</time></li>
+          <li class="now"><span class="dot"></span><div><h3>September report</h3><p>Open now · due in 7 days</p></div><time>16 Oct</time></li>
+          <li><span class="dot"></span><div><h3>October report</h3><p>Opens after the month ends</p></div><time>1 Nov</time></li>
+        </ol>
+        <div class="switch-row">
+          <div><h3 id="sw-t">Accepting purchases</h3><p id="sw-p">Investors can buy Sol Coins.</p></div>
+          <button class="sw" id="sw" role="switch" aria-checked="true" aria-labelledby="sw-t"></button>
+        </div>
+        <details class="sim"><summary>Simulation clock</summary></details>
+      </section>
+
+      <!-- Proceeds -->
+      <section class="card proceeds">
+        <div class="card-head"><h2><span class="chip-ic"><svg class="ic"><use href="#i-coin"/></svg></span>Sale proceeds</h2></div>
+        <p>What investors paid for Sol Coins, held by the contract until you withdraw it.</p>
+        <div class="p-val num">Rp24,500,000</div>
+        <div class="p-sub">0.0245 simulated ETH</div>
+        <button class="btn-sun" type="button"><svg class="ic"><use href="#i-down"/></svg>Withdraw to operator wallet</button>
+      </section>
+
+      <!-- Activity -->
+      <section class="card">
+        <div class="card-head"><h2><span class="chip-ic"><svg class="ic"><use href="#i-pulse"/></svg></span>Recent activity</h2></div>
+        <div class="act">
+          <div class="act-row"><span class="act-ic k-buy"><svg class="ic"><use href="#i-sun"/></svg></span><div class="act-t">Alice bought 40 Sol Coins<small>2 hours ago</small></div><span class="act-v">Rp4.0M</span></div>
+          <div class="act-row"><span class="act-ic k-claim"><svg class="ic"><use href="#i-check"/></svg></span><div class="act-t">Budi claimed income<small>Yesterday</small></div><span class="act-v">Rp61,375</span></div>
+          <div class="act-row"><span class="act-ic k-rep"><svg class="ic"><use href="#i-doc"/></svg></span><div class="act-t">August report · 1,310 kWh<small>5 days ago</small></div><span class="act-v">Rp1.3M</span></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+<div class="tag">CONCEPT · static mock with sample data</div>
+
+<script>
+const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US'), rp = n => 'Rp' + new Intl.NumberFormat('en-US',{maximumFractionDigits:1}).format(n);
+// sold-coins mini wall: 25 cells, each = 40 coins
+$('#coinrow').innerHTML = Array.from({length:25},(_,i)=>`<i class="${i < Math.round(612/40) ? 'f' : ''}"></i>`).join('');
+// live statement
+const kwh = $('#kwh'), cost = $('#cost'), res = $('#res');
+const num = el => Number(el.value.replace(/\D/g,'')) || 0;
+function calc(){
+  const r = num(kwh)*1500, c = num(cost), m = num(res), d = Math.max(0, r-c-m), tot = Math.max(r,1);
+  const a = Math.min(100,c/tot*100), b = Math.min(100,a + m/tot*100);
+  $('#donut').style.setProperty('--a', a+'%'); $('#donut').style.setProperty('--b', b+'%');
+  $('#pct').textContent = Math.round(d/tot*100) + '%';
+  $('#l-cost').textContent = 'Rp'+fmt(c); $('#l-res').textContent = 'Rp'+fmt(m); $('#l-dist').textContent = 'Rp'+fmt(d);
+  $('#dist').textContent = 'Rp'+fmt(d); $('#rec').textContent = 'Rp'+fmt(r); $('#eth').textContent = (d/1e9).toFixed(10).replace(/0+$/,'');
+  $('#per').textContent = rp(d/1000);
+}
+[kwh,cost,res].forEach(el => el.addEventListener('input', calc));
+document.querySelectorAll('[data-kwh]').forEach(b => b.onclick = () => { kwh.value = b.dataset.kwh; calc(); });
+calc();
+// purchases switch
+$('#sw').onclick = e => { const on = e.currentTarget.getAttribute('aria-checked') !== 'true'; e.currentTarget.setAttribute('aria-checked', on);
+  $('#sw-t').textContent = on ? 'Accepting purchases' : 'Purchases paused'; $('#sw-p').textContent = on ? 'Investors can buy Sol Coins.' : 'Paused by you. Claims still work.'; };
+// count-up
+if (!matchMedia('(prefers-reduced-motion: reduce)').matches) document.querySelectorAll('[data-count]').forEach(el => {
+  const to = +el.dataset.count, t0 = performance.now();
+  (function tick(t){ const p = Math.min(1,(t-t0)/900), e = 1-Math.pow(1-p,3); el.textContent = fmt(to*e); if (p<1) requestAnimationFrame(tick); })(t0);
+});
+</script>
+</body>
+</html>
