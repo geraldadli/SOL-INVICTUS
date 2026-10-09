@@ -92,6 +92,9 @@ async function readReportingStatus() {
   return { safeguards: true, lastPeriod: Number(lastPeriod), nextReportingPeriod: Number(next), reportingOpensAt: Number(opens), reportDueAt: Number(due),
     purchasesPaused: paused, overdue, purchasesAllowed: allowed, timestamp: block.timestamp, statusUnavailable: false };
 }
+// Reporting & checks window: every block is a dropdown. Both panels are redrawn from scratch, so the open ones are remembered here.
+const openDrops = new Set();
+const drop = (key, label, title, body) => `<details class="drop" data-drop="${key}"${openDrops.has(key) ? ' open' : ''}><summary><span class="drop-text"><span class="drop-label">${label}</span><span class="drop-title">${title}</span></span><svg class="icon drop-chevron" aria-hidden="true"><use href="#i-down" /></svg></summary><div class="drop-body">${body}</div></details>`;
 const reportSourceNote = () => verification.required ? verification.demo ? 'Monthly figures must pass an automatic check using sample data.' : 'Monthly figures must be approved by the data-checking service.' : 'Monthly figures are supplied by the operator.';
 function renderReporting() {
   const status = !state ? 'Loading reporting status…' : !state.safeguards ? 'Reporting protections unavailable on this contract'
@@ -101,7 +104,7 @@ function renderReporting() {
   const sourceNote = reportSourceNote();
   const detail = state?.safeguards ? `<p>Last report: ${state.lastPeriod ? periodLabel(state.lastPeriod) : 'None yet'}. Next required: <strong>${periodLabel(state.nextReportingPeriod)}</strong>.</p><p>Reporting opens: ${utcDate(state.reportingOpensAt)}<br>Due by: ${utcDate(state.reportDueAt)}</p><p>Claims and transfers remain available. ${sourceNote}</p>` : '<p>Monthly deadlines and purchase pausing require a version 2 or later contract.</p>';
   // The operator lab's #operator-reporting-status is drawn as a schedule by renderOperatorOverview().
-  $('#reporting-status').innerHTML = `<h2>${status}</h2>${detail}`;
+  $('#reporting-status').innerHTML = drop('status', 'Reporting status', status, detail);
   $('#reporting-controls').hidden = !state?.safeguards;
   $('#simulation-clock').hidden = !simulation;
   const pauseSwitch = $('#pause-purchases');
@@ -842,9 +845,11 @@ function renderVerification() {
   const verified = state?.logs?.filter(log => log.name === 'ReportVerified').at(-1);
   const status = verified ? `<p>Project status in the ${periodLabel(verified.args.period)} report: <strong>${operatingStatuses[Number(verified.args.operatingStatus)] ?? 'Unknown'}</strong>.</p>` : '';
   const technical = `${verification.required ? `<p>The contract checks the verifier’s digital signature, the reporting month, the figures, and the exact payment amount. Verifier address: <code class="evidence-hash">${esc(verification.verifier)}</code>.</p>` : ''}${verified ? `<p>Record identifier: <code class="evidence-hash">${esc(verified.args.evidenceHash)}</code>. This lets reviewers check that the records have not changed.</p>` : ''}${!simulation ? `<p>We compare blockchain transactions and receipts with the report, and check that the contract still holds unpaid income separately from share-sale proceeds. A matching payment does not prove that the project earned real revenue.</p>${incomeAudit && !auditError ? `<p>Checked at block ${fmt(incomeAudit.blockNumber)}.${incomeAudit.latest ? ` The latest report has ${incomeAudit.latest.confirmations} block confirmation${incomeAudit.latest.confirmations === 1 ? '' : 's'}; this is not a guarantee of finality.` : ''}</p>` : ''}${auditError ? `<p>Check details: ${esc(auditError)}</p>` : ''}` : '<p>Run the local blockchain demo with npm start to try the automatic data and payment checks.</p>'}`;
-  const html = `<h2>${title}</h2><p>${esc(explanation)}</p>${status}${funds}<p class="field-help">Late reports pause new purchases. You can still claim income already received and send your shares.</p>`;
-  const panel = $('#verification-panel'), expanded = panel.querySelector('details')?.open;
-  panel.innerHTML = `${html}<details${expanded ? ' open' : ''}><summary>How this is checked</summary>${technical}</details>`;
+  $('#verification-panel').innerHTML = [
+    drop('checks', 'Report checks', title, `<p>${esc(explanation)}</p>${status}<p class="field-help">Late reports pause new purchases. You can still claim income already received and send your shares.</p>`),
+    funds && drop('payments', 'Payments', 'Income received and held', funds),
+    drop('method', 'Details', 'How this is checked', technical),
+  ].join('');
   $('#proof-controls').hidden = !verification.required;
   const waitingForMonth = Boolean(state && state.timestamp < state.reportingOpensAt);
   $('#load-evidence').disabled = proofLoading || advancingDemoClock || Boolean(ui.busy) || !state || !isOperator() || waitingForMonth;
@@ -1115,6 +1120,8 @@ $('#notices-button').onclick = openNotices;
 $('#notices-modal').addEventListener('click', event => {
   if (event.target === event.currentTarget || event.target.closest('[data-close-notices]')) $('#notices-modal').close();
 });
+// toggle doesn't bubble, so listen in the capture phase to remember which dropdowns are open.
+$('#notices-modal').addEventListener('toggle', ({ target }) => { if (target.dataset.drop) target.open ? openDrops.add(target.dataset.drop) : openDrops.delete(target.dataset.drop); }, true);
 // A closed dialog is display:none, which resets its scroll, so remember it while it is open.
 $('#notices-modal').addEventListener('scroll', event => { if (event.target.open) noticesScroll = event.target.scrollTop; });
 $('#notices-modal').addEventListener('close', () => $('#notices-button').setAttribute('aria-expanded', 'false'));

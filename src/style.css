@@ -596,10 +596,12 @@ a.op-act:hover .op-act-t { color: var(--maroon); }
 .modal-close:hover { background: var(--peach); }
 .modal h2 { padding-right: 40px; font-family: var(--serif); font-weight: 400; font-size: 28px; }
 .modal-text { margin-top: 8px; font-size: 15px; line-height: 1.5; color: var(--muted); }
-.notices-modal { width: min(960px, calc(100% - 32px), calc((100dvh - 48px) * 16 / 9)); aspect-ratio: 16 / 9; max-height: calc(100dvh - 48px); overflow-y: auto; overscroll-behavior: contain; }
+/* No scrollbar: tall content (open dropdowns) still scrolls with the wheel, touch or keyboard. */
+.notices-modal { width: min(960px, calc(100% - 32px), calc((100dvh - 48px) * 16 / 9)); aspect-ratio: 16 / 9; max-height: calc(100dvh - 48px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+.notices-modal::-webkit-scrollbar { display: none; }
+.notices-modal::backdrop { background: rgba(43, 10, 18, .35); -webkit-backdrop-filter: blur(18px) saturate(1.15); backdrop-filter: blur(18px) saturate(1.15); }
 .notices-modal .modal-body { min-height: 100%; }
 .notices-modal .reporting-card { margin: 16px 0 0; }
-.notices-modal .reporting-card h2 { padding-right: 0; font-size: 22px; }
 .wallet-options { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; }
 .wallet-option { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 64px; padding: 10px 14px; border: 1.5px solid var(--line); border-radius: 18px; background: var(--white); color: var(--ink); text-align: left; }
 .wallet-option:hover { border-color: var(--maroon); }
@@ -754,12 +756,23 @@ a.op-act:hover .op-act-t { color: var(--maroon); }
   .inc-node { display: grid; grid-template-columns: 60px minmax(0, 1fr); gap: 0 16px; align-items: center; text-align: left; }
   .inc-ic { grid-row: span 2; margin: 0; }
 }
-.reporting-card { margin-top: 16px; margin-bottom: 24px; padding: 24px; }
-.reporting-card p { margin: 12px 0; line-height: 1.6; }
+/* Reporting & checks: each block is a white dropdown card. */
+.reporting-card { display: grid; gap: 12px; padding: 0; background: none; border-radius: 0; }
 .reporting-actions { display: flex; flex-wrap: wrap; gap: 12px; }
 .evidence-hash { overflow-wrap: anywhere; font-size: .85em; }
-.reporting-card summary { cursor: pointer; font-weight: 600; padding: 8px 0; }
-.reporting-card details { margin-top: 12px; }
+.drop { min-width: 0; background: var(--white); border-radius: 20px; }
+.drop summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 68px; padding: 14px 20px; border-radius: 20px; cursor: pointer; list-style: none; }
+.drop summary::-webkit-details-marker { display: none; }
+.drop summary:hover .drop-title { color: var(--maroon); }
+.drop summary:hover .drop-chevron { color: var(--crimson); }
+.drop-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.drop-label { font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.drop-title { font-family: var(--serif); font-size: 20px; line-height: 1.25; }
+.drop-chevron { width: 20px; height: 20px; stroke-width: 2.4; color: var(--maroon); transition: transform .25s; }
+.drop[open] .drop-chevron { transform: rotate(180deg); }
+.drop-body { padding: 0 20px 20px; }
+.drop-body p { margin: 12px 0 0; line-height: 1.6; }
+.drop-body p:first-child { margin-top: 0; }
 #proof-controls { padding-bottom: 20px; }
 .input[readonly] { opacity: .8; cursor: default; }
 .milestone-container { padding-top: 32px; padding-bottom: 64px; }
@@ -778,6 +791,7 @@ a.op-act:hover .op-act-t { color: var(--maroon); }
 @media (prefers-reduced-motion: reduce) {
   .wall-tilt, .wall-pick, .home-hint-dot { animation: none; transition: none; }
   .sun-rays, .skeleton { animation: none; }
+  .drop-chevron { transition: none; }
   .progress-fill, .breakdown-bar span { transition: none; }
   .tiles i, .tiles i.fresh, .tiles i.wave, .inc-bar span, .inc-ic, .inc-packet, .inc-pips i { animation: none; transition: none; }
   .reveal { opacity: 1; translate: none; scale: none; transition: none; }
