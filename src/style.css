@@ -456,10 +456,11 @@ select.input { cursor: pointer; }
 
 /* Ownership ledger */
 .tiles { position: relative; display: grid; grid-template-columns: repeat(40, 1fr); gap: 3px; margin-top: 20px; padding: 4px; margin-inline: -4px; cursor: crosshair; user-select: none; -webkit-user-select: none; touch-action: pan-y; }
-.tiles i { display: block; aspect-ratio: 1; border-radius: 3px; background: var(--apricot); transition: background .25s, box-shadow .25s; }
-.tiles i.sold { background: #D9A39A; }
-.tiles i.pick { background: rgba(250, 189, 61, .6); box-shadow: inset 0 0 0 1.5px var(--orange); }
-.tiles i.mine { background: var(--sunset); box-shadow: 0 0 9px rgba(233, 92, 5, .55); }
+/* --h (0 to 1) is how far a tile is lifted by the pointer; main.js animates it per frame, so nothing here transitions. */
+.tiles i { --base: var(--apricot); --to: var(--sun); --ring: 0 0 #0000; position: relative; display: block; aspect-ratio: 1; border-radius: 3px; background: color-mix(in srgb, var(--base), var(--to) calc(var(--h, 0) * 70%)); box-shadow: var(--ring), 0 0 0 calc(var(--h, 0) * 2px) var(--white), 0 calc(var(--h, 0) * 5px) calc(var(--h, 0) * 12px) rgba(131, 9, 45, calc(var(--h, 0) * .3)); }
+.tiles i.sold { --base: #D9A39A; --to: #C47D73; }
+.tiles i.pick { --base: rgba(250, 189, 61, .6); --ring: inset 0 0 0 1.5px var(--orange); }
+.tiles i.mine { background: var(--sunset); --ring: 0 0 9px rgba(233, 92, 5, .55); }
 .tiles i.fresh { animation: ss-pop .6s cubic-bezier(.2, .9, .3, 1.4) backwards; }
 .tiles i.wave { animation: ss-wave .8s ease-out backwards; }
 @keyframes ss-pop { 0% { transform: scale(0); } 60% { transform: scale(1.7); } 100% { transform: scale(1); } }
