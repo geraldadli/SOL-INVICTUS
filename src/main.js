@@ -1,3 +1,4 @@
+import './i18n.js';
 import { createSimulation, demoAccounts } from './simulation.js';
 import { ensureWalletNetwork } from './wallet-network.js';
 import { getMetaMaskProvider } from './metamask.js';

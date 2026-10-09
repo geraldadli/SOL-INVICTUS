@@ -65,7 +65,8 @@ export function createMilestoneScreen({ $, esc, eth, getContext, transact, notif
     $('#milestone-demo-reviewer').disabled = Boolean(busy);
     $('#milestone-totals').innerHTML = `<p><strong>Raised:</strong> ${eth(m.raised)}<br><strong>Already released:</strong> ${eth(m.released)}<br><strong>Available to withdraw:</strong> ${eth(m.available)}<br><strong>Still locked:</strong> ${eth(m.held - m.available)}</p>`;
     const cards = m.rows.map((row, i) => `<article class="card milestone-stage"><p class="overline">Stage ${i + 1} · ${portions[i]}%</p><h2>${milestoneNames[i]}</h2><p><strong>${statuses[row.status]}</strong>${row.revision ? ` · Submission ${row.revision}` : ''}</p>${row.record ? `<p class="milestone-record-text">${esc(row.record)}</p><details><summary>Record fingerprint</summary><code class="evidence-hash">${esc(row.hash)}</code><p>This fingerprint identifies the submitted text. It does not authenticate a supplier, inspection, or real-world work.</p></details>` : '<p>The operator must submit supporting records for this stage.</p>'}${row.note ? `<p><strong>Reviewer’s note:</strong> ${esc(row.note)}</p>` : ''}</article>`).join('');
-    if ($('#milestone-stages').innerHTML !== cards) $('#milestone-stages').innerHTML = cards;
+    // Compare against the markup last drawn, not innerHTML: the language switch rewrites the text in place.
+    if ($('#milestone-stages').dataset.html !== cards) { $('#milestone-stages').innerHTML = cards; $('#milestone-stages').dataset.html = cards; }
     const next = m.rows[m.approved], pending = next?.status === 1;
     const key = `${address}:${m.approved}:${next?.revision}:${next?.status}`;
     if (key !== formKey) {

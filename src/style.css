@@ -72,6 +72,20 @@ main:focus { outline: none; }
 .chip-copy { display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 50%; background: transparent; color: var(--maroon); }
 .connect-button { flex: none; height: 44px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--maroon); color: var(--cream); font-size: 14px; font-weight: 700; }
 .connect-button:hover { background: var(--maroon-deep); }
+.lang-toggle { flex: none; display: flex; align-items: center; height: 40px; padding: 3px; border-radius: 999px; background: rgba(255, 255, 255, .8); border: 1px solid rgba(131, 9, 45, .16); }
+.lang-toggle button { height: 32px; min-width: 36px; padding: 0 8px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .04em; }
+.lang-toggle button:hover { background: var(--peach); color: var(--ink); }
+.lang-toggle button[aria-pressed="true"] { background: var(--maroon); color: var(--cream); }
+/* On phones the header is full: show only the language you can switch to, and drop the network pill (the banner already names the network). */
+@media (max-width: 480px) {
+  .header-actions { gap: 4px; }
+  .network-pill { display: none; }
+  .connect-button { padding: 0 14px; }
+  .lang-toggle { padding: 0; border: 0; background: none; }
+  .lang-toggle button[aria-pressed="true"] { display: none; }
+  .lang-toggle button { width: 40px; height: 40px; min-width: 0; padding: 0; border: 1px solid rgba(131, 9, 45, .16); background: rgba(255, 255, 255, .8); color: var(--maroon); }
+  .lang-toggle button:hover { background: var(--peach); color: var(--maroon); }
+}
 .load-error { width: calc(min(1200px, 100%) - 2 * var(--gutter)); margin: 16px auto 0; padding: 14px 18px; border-radius: 16px; background: var(--error-soft); color: var(--error); font-size: 14px; font-weight: 600; line-height: 1.5; }
 
 /* Sun illustration */
