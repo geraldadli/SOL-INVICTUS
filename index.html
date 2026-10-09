@@ -32,6 +32,8 @@
     <symbol id="i-chain" viewBox="0 0 24 24"><path d="M12 2l8 4.5v9L12 20l-8-4.5v-9z" /><path d="M12 11l8-4.5M12 11v9M12 11L4 6.5" /></symbol>
     <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h13v4" /><path d="M3 7v11a2 2 0 0 0 2 2h14a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1H5a2 2 0 0 1-2-1z" /><circle cx="16.5" cy="14" r="1.2" /></symbol>
     <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7L20 8.6" /><path d="M20 3.5v5.1h-5.1" /></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4" /><path d="M5 4h11l-2 4 2 4H5" /></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3.5 6.5 12 13l8.5-6.5" /></symbol>
   </svg>
   <a class="skip-link" href="#main-content">Skip to content</a>
   <div class="demo-banner"><span class="demo-tag">DEMO</span><span id="banner-text">Sepolia testnet. Fictional asset. No real money. No legal ownership rights.</span></div>
@@ -47,6 +49,7 @@
     <div class="header-actions">
       <button id="wrong-network" class="wrong-network" type="button" hidden><span class="dot" aria-hidden="true"></span><span class="wide-only">Wrong network</span><span class="narrow-only">Network</span></button>
       <span id="network-pill" class="network-pill" title="Sepolia testnet"><span class="dot" aria-hidden="true"></span><span class="wide-only" id="network-name">Sepolia</span></span>
+      <button id="notices-button" class="notices-button" type="button" aria-label="Reporting and checks" aria-haspopup="dialog" aria-expanded="false" title="Reporting and checks"><svg class="icon" aria-hidden="true"><use href="#i-mail" /></svg></button>
       <div id="wallet-chip" class="wallet-chip" hidden>
         <button id="wallet-menu-button" class="wallet-chip-main" type="button" aria-label="Wallet menu" aria-haspopup="dialog" aria-expanded="false"><span id="operator-tag" class="operator-tag wide-only" hidden>OPERATOR</span><span id="operator-dot" class="operator-dot narrow-only" hidden></span><span class="wide-only" id="wallet-address-wide"></span><span class="narrow-only" id="wallet-address-narrow"></span><svg class="icon icon-sm wide-only" aria-hidden="true"><use href="#i-down" /></svg></button>
         <button id="copy-address" class="chip-copy wide-only" type="button" aria-label="Copy wallet address"><svg class="icon icon-copy" aria-hidden="true"><use href="#i-copy" /></svg></button>
@@ -97,15 +100,12 @@
         <div id="project-content" hidden>
           <div class="project-hero">
             <div class="project-hero-text">
-              <span class="status-chip" id="status-chip">Selling</span>
               <h1>Cikarang Rooftop Solar</h1>
               <div class="project-meta"><span>Cikarang, West Java</span><a id="contract-link" class="ext-link" href="https://sepolia.etherscan.io/" target="_blank" rel="noopener noreferrer" hidden>View contract on Etherscan<svg class="icon icon-sm" aria-hidden="true"><use href="#i-ext" /></svg></a></div>
             </div>
             <div class="project-hero-sun"><div class="sun sun-small" aria-hidden="true"><div class="sun-rays"></div><div class="sun-disc"></div></div></div>
           </div>
-          <section id="reporting-status" class="card reporting-card" aria-live="polite"></section>
-          <section id="verification-panel" class="card reporting-card" aria-live="polite"></section>
-          <p><a href="#milestones" class="btn btn-md btn-outline">View funding milestones</a></p>
+          <p data-admin-only hidden><a href="#milestones" class="btn btn-inline btn-milestones"><svg class="icon" aria-hidden="true"><use href="#i-flag" /></svg>View funding milestones</a></p>
           <div class="project-layout">
             <div class="project-main">
               <div class="stat-grid">
@@ -279,7 +279,6 @@
         <div id="op-loading" hidden><div class="skeleton sk-card"></div></div>
         <div id="op-content" hidden>
           <div class="op-head">
-            <div class="op-eyebrow"><i aria-hidden="true"></i>Operator console</div>
             <h1 id="op-greeting">Good evening, operator</h1>
             <p class="op-sub" id="op-sub"></p>
           </div>
@@ -343,7 +342,7 @@
                     <div class="op-step">
                       <div class="op-step-n" aria-hidden="true">2</div>
                       <div class="op-step-body">
-                        <div class="op-step-title">Costs &amp; repairs<small>Deducted before shareholders are paid.</small></div>
+                        <div class="op-step-title">Costs &amp; repairs</div>
                         <div class="field-pair">
                           <div><label class="field-label" for="report-costs">Operating costs</label><div class="input-wrap"><span class="input-prefix">Rp</span><input id="report-costs" class="input input-strong has-prefix" value="420000" inputmode="numeric" autocomplete="off" /></div></div>
                           <div><label class="field-label" for="report-reserve">Set aside for repairs</label><div class="input-wrap"><span class="input-prefix">Rp</span><input id="report-reserve" class="input input-strong has-prefix" value="250000" inputmode="numeric" autocomplete="off" /></div></div>
@@ -390,7 +389,6 @@
                     <div><h3 id="purchase-state">Accepting purchases</h3><p id="purchase-state-note"></p></div>
                     <button type="button" id="pause-purchases" class="op-switch" role="switch" aria-checked="true" aria-labelledby="purchase-state"></button>
                   </div>
-                  <p class="field-help field-help-small">Removing a manual pause does not override an overdue report. The operator wallet is fixed; wallet recovery is not included.</p>
                   <details id="simulation-clock" class="sim-tools" hidden>
                     <summary>Simulation clock</summary>
                     <div class="sim-actions">
@@ -416,7 +414,6 @@
               </section>
             </div>
           </div>
-          <section id="operator-verification" class="card reporting-card" aria-live="polite"></section>
         </div>
       </div>
     </section>
@@ -525,6 +522,15 @@
       <a id="menu-faucet" class="menu-item menu-item-soft" href="https://cloud.google.com/application/web3/faucet/ethereum/sepolia" target="_blank" rel="noopener noreferrer">Need test ETH? Open a Sepolia faucet<svg class="icon icon-sm" aria-hidden="true"><use href="#i-ext" /></svg></a>
       <button type="button" id="menu-reset" class="menu-item" hidden>Reset demo<span class="menu-tag">DEMO</span></button>
       <button type="button" id="menu-disconnect" class="menu-disconnect">Disconnect</button>
+    </div>
+  </dialog>
+
+  <dialog id="notices-modal" class="modal notices-modal" aria-labelledby="notices-title">
+    <div class="modal-body">
+      <button type="button" class="modal-close" data-close-notices aria-label="Close"><svg class="icon icon-close" aria-hidden="true"><use href="#i-x" /></svg></button>
+      <h2 id="notices-title">Reporting &amp; checks</h2>
+      <section id="reporting-status" class="card reporting-card" aria-live="polite"></section>
+      <section id="verification-panel" class="card reporting-card" aria-live="polite"></section>
     </div>
   </dialog>
 

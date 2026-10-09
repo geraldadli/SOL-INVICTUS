@@ -229,6 +229,9 @@ function render() {
 function renderHeader() {
   const operator = isOperator(), wrong = wrongNetwork();
   document.querySelectorAll('[data-operator-only]').forEach(link => { link.hidden = !operator; });
+  // Funding milestones are run by the operator and the milestone reviewer; investor wallets don't see the entry point.
+  const admin = operator || isMilestoneReviewer();
+  document.querySelectorAll('[data-admin-only]').forEach(el => { el.hidden = !admin; });
   $('#wrong-network').hidden = !wrong;
   $('#network-pill').hidden = wrong;
   $('#wallet-chip').hidden = !address;
@@ -244,8 +247,6 @@ function renderProject() {
   $('#project-content').hidden = !state;
   if (!state) return;
   const left = state.available, sold = 1000 - left, last = reports().at(-1);
-  $('#status-chip').textContent = left ? `Selling · ${fmt(left)} Sol Coins left` : 'Fully funded';
-  if (state.safeguards && (!state.purchasesAllowed || state.statusUnavailable)) $('#status-chip').textContent = 'Purchases paused';
   $('#last-kwh').textContent = last ? `${fmt(last.kwh)} kWh` : 'None yet';
   $('#last-label').textContent = last ? periodLabel(last.period) : 'First report pending';
   $('#sold-pct').textContent = pct(sold);
@@ -772,6 +773,14 @@ function openMenu() {
   $('#wallet-menu-button').setAttribute('aria-expanded', 'true');
 }
 function closeMenu() { if ($('#wallet-menu').open) $('#wallet-menu').close(); }
+let noticesScroll = 0;
+function openNotices() {
+  closeMenu();
+  const dialog = $('#notices-modal');
+  if (!dialog.open) dialog.showModal();
+  dialog.scrollTop = noticesScroll;
+  $('#notices-button').setAttribute('aria-expanded', 'true');
+}
 
 // Chain state
 async function refresh() {
@@ -831,10 +840,8 @@ function renderVerification() {
   const status = verified ? `<p>Project status in the ${periodLabel(verified.args.period)} report: <strong>${operatingStatuses[Number(verified.args.operatingStatus)] ?? 'Unknown'}</strong>.</p>` : '';
   const technical = `${verification.required ? `<p>The contract checks the verifier’s digital signature, the reporting month, the figures, and the exact payment amount. Verifier address: <code class="evidence-hash">${esc(verification.verifier)}</code>.</p>` : ''}${verified ? `<p>Record identifier: <code class="evidence-hash">${esc(verified.args.evidenceHash)}</code>. This lets reviewers check that the records have not changed.</p>` : ''}${!simulation ? `<p>We compare blockchain transactions and receipts with the report, and check that the contract still holds unpaid income separately from share-sale proceeds. A matching payment does not prove that the project earned real revenue.</p>${incomeAudit && !auditError ? `<p>Checked at block ${fmt(incomeAudit.blockNumber)}.${incomeAudit.latest ? ` The latest report has ${incomeAudit.latest.confirmations} block confirmation${incomeAudit.latest.confirmations === 1 ? '' : 's'}; this is not a guarantee of finality.` : ''}</p>` : ''}${auditError ? `<p>Check details: ${esc(auditError)}</p>` : ''}` : '<p>Run the local blockchain demo with npm start to try the automatic data and payment checks.</p>'}`;
   const html = `<h2>${title}</h2><p>${esc(explanation)}</p>${status}${funds}<p class="field-help">Late reports pause new purchases. You can still claim income already received and send your shares.</p>`;
-  for (const id of ['verification-panel', 'operator-verification']) {
-    const panel = $(`#${id}`), expanded = panel.querySelector('details')?.open;
-    panel.innerHTML = `${html}<details${expanded ? ' open' : ''}><summary>How this is checked</summary>${technical}</details>`;
-  }
+  const panel = $('#verification-panel'), expanded = panel.querySelector('details')?.open;
+  panel.innerHTML = `${html}<details${expanded ? ' open' : ''}><summary>How this is checked</summary>${technical}</details>`;
   $('#proof-controls').hidden = !verification.required;
   const waitingForMonth = Boolean(state && state.timestamp < state.reportingOpensAt);
   $('#load-evidence').disabled = proofLoading || advancingDemoClock || Boolean(ui.busy) || !state || !isOperator() || waitingForMonth;
@@ -855,6 +862,13 @@ async function refreshIncomeAudit() {
   try { const result = await auditIncome(provider, deployment); if (run === auditRun) incomeAudit = result; }
   catch (error) { if (run === auditRun) auditError = errorMessage(error); }
   if (run === auditRun) renderVerification();
+}
+// Replays the slide-down animation on elements whose content just arrived.
+function slideDown(...elements) {
+  for (const el of elements) {
+    if (!el || el.hidden) continue;
+    el.classList.remove('slide-down'); void el.offsetWidth; el.classList.add('slide-down');
+  }
 }
 $('#load-evidence').onclick = async () => {
   if (!verification.required || proofLoading || advancingDemoClock || ui.busy || !state) return;
@@ -878,7 +892,10 @@ $('#load-evidence').onclick = async () => {
     $('#evidence-note').textContent = `${periodLabel(bundle.evidence.period)}: data check passed. Project status: ${operatingStatuses[bundle.evidence.operatingStatus]}. You can publish using these figures until ${utcDate(bundle.statement.validUntil)}. ${bundle.evidence.sourceKind === 'simulated' ? 'These are sample records for the demo.' : 'You can download the supporting records below.'}`;
     await refresh();
   } catch (error) { $('#evidence-note').textContent = verificationMessage(error); }
-  finally { proofLoading = false; renderVerification(); renderBreakdown(); }
+  finally {
+    proofLoading = false; renderVerification(); renderBreakdown();
+    if (proofBundle) slideDown($('#evidence-note'), $('#download-evidence'), ...['report-kwh', 'report-costs', 'report-reserve'].map(id => $(`#${id}`).closest('.input-wrap')), $('#bd-ok'));
+  }
 };
 $('#advance-local-report').onclick = async () => {
   if (advancingDemoClock || proofLoading || ui.busy || !isOperator() || !verification.demo) return;
@@ -1089,6 +1106,13 @@ $('#wallet-modal').addEventListener('close', () => {
 $('#wallet-menu').addEventListener('click', event => { if (event.target === event.currentTarget) closeMenu(); });
 $('#wallet-menu').addEventListener('close', () => $('#wallet-menu-button').setAttribute('aria-expanded', 'false'));
 $('#wallet-menu-button').onclick = openMenu;
+$('#notices-button').onclick = openNotices;
+$('#notices-modal').addEventListener('click', event => {
+  if (event.target === event.currentTarget || event.target.closest('[data-close-notices]')) $('#notices-modal').close();
+});
+// A closed dialog is display:none, which resets its scroll, so remember it while it is open.
+$('#notices-modal').addEventListener('scroll', event => { if (event.target.open) noticesScroll = event.target.scrollTop; });
+$('#notices-modal').addEventListener('close', () => $('#notices-button').setAttribute('aria-expanded', 'false'));
 $('#copy-address').onclick = copyAddress;
 $('#menu-copy').onclick = copyAddress;
 $('#menu-switch').onclick = () => { if (usingMetaMask) switchAccount(); else openModal('choose'); };
