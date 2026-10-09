@@ -1,10 +1,10 @@
 import { BrowserProvider, ContractFactory, formatEther } from 'ethers';
 import { ensureWalletNetwork } from './wallet-network.js';
 import { getMetaMaskProvider } from './metamask.js';
-import artifact from '../artifacts/SuryaShare.json';
+import artifact from '../artifacts/SolInvictus.json';
 
 const $ = selector => document.querySelector(selector);
-const pendingKey = 'suryashare.sepolia.deployment';
+const pendingKey = 'solinvictus.sepolia.deployment';
 let signer;
 const message = error => error.code === 'ACTION_REJECTED' || error.code === 4001
   ? 'Cancelled in your wallet. No deployment was submitted.'

@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @notice Hackathon demo. Fictional asset, test ETH, no legal ownership rights.
-contract SuryaShare is ERC20, ReentrancyGuard {
+contract SolInvictus is ERC20, ReentrancyGuard {
     uint256 public constant PROJECT_SHARES = 1000;
     uint256 public constant WEI_PER_DEMO_IDR = 1 gwei;
     uint256 public constant SHARE_PRICE = 100000 * WEI_PER_DEMO_IDR;
@@ -30,7 +30,7 @@ contract SuryaShare is ERC20, ReentrancyGuard {
         _;
     }
 
-    constructor() ERC20("SuryaShare Cikarang Demo", "SURYA") {
+    constructor() ERC20("Sol Invictus Cikarang Demo", "SOLC") {
         require(block.chainid == 31337 || block.chainid == 11155111, "Test networks only");
         operator = msg.sender;
         _mint(msg.sender, PROJECT_SHARES);

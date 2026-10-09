@@ -1,6 +1,6 @@
 // Browser-only role play. No keys, RPC calls, or blockchain transactions.
 export const demoAccounts = [1, 2, 3].map(n => `0x${String(n).padStart(40, '0')}`);
-const key = 'suryashare.simulation.v1';
+const key = 'solinvictus.simulation.v1';
 const scale = 1000000000n;
 const fresh = () => ({ available: 1000, revenue: 0, proceeds: 0, lastPeriod: 0, logs: [],
   holders: Object.fromEntries(demoAccounts.map((a, i) => [a, { shares: i === 0 ? 1000 : 0, cash: 100000000000, credit: 0, claimed: 0 }])) });

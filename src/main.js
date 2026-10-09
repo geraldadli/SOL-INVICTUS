@@ -37,9 +37,9 @@ const wrongNetwork = () => Boolean(address && usingMetaMask && walletChainId !==
 const txUrl = hash => onSepolia() ? `https://sepolia.etherscan.io/tx/${hash}` : '';
 const balanceText = () => simulation ? idr(state.cash) : eth(state.ethBalance);
 const reverts = {
-  'Use an investor wallet': "The operator wallet can't buy shares. Switch to an investor account.",
-  'Invalid share quantity': 'Fewer shares are left than you tried to buy. Pick a smaller number and try again.',
-  'Incorrect payment': "The payment didn't match the share price. Reload the page and try again.",
+  'Use an investor wallet': "The operator wallet can't buy Sol Coins. Switch to an investor account.",
+  'Invalid share quantity': 'Fewer Sol Coins are left than you tried to buy. Pick a smaller number and try again.',
+  'Incorrect payment': "The payment didn't match the Sol Coin price. Reload the page and try again.",
   'Period already reported or out of order': 'This month has already been reported, or it comes before the last report. Pick a later month and try again.',
   'No distributable income': "Costs and reserve are higher than this month's receipts, so there's nothing to share.",
   'Incorrect revenue deposit': "The deposit didn't match the report. Reload the page and try again.",
@@ -47,7 +47,7 @@ const reverts = {
   'Payout failed': "The payout couldn't be sent to your wallet. Your income is still safe in the contract. Try again in a minute.",
   'No proceeds': 'There are no sale proceeds to withdraw.',
   'Withdrawal failed': "The withdrawal didn't go through. The proceeds are still in the contract. Try again in a minute.",
-  'Sale inventory reserved': "The operator's unsold shares are reserved for buyers and can't be sent.",
+  'Sale inventory reserved': "The operator's unsold Sol Coins are reserved for buyers and can't be sent.",
   'Operator only': 'Only the operator wallet can do this.',
 };
 
@@ -101,11 +101,11 @@ const reports = () => (state?.logs ?? []).filter(log => log.name === 'ReportPubl
 function activity() {
   return (state?.logs ?? []).flatMap(log => {
     const a = log.args, item = { hash: log.transactionHash, block: log.blockNumber };
-    if (log.name === 'SharesPurchased') return { ...item, kind: 'Bought', mine: same(a.buyer, address), title: `${cap(nameFor(a.buyer))} bought ${plural(Number(a.shares), 'share')}`, wei: BigInt(a.paid) };
+    if (log.name === 'SharesPurchased') return { ...item, kind: 'Bought', mine: same(a.buyer, address), title: `${cap(nameFor(a.buyer))} bought ${plural(Number(a.shares), 'Sol Coin')}`, wei: BigInt(a.paid) };
     if (log.name === 'ReportPublished') return { ...item, kind: 'Report', mine: false, title: `${periodLabel(a.period)} report · ${fmt(a.kwh)} kWh`, wei: BigInt(a.deposited) };
     if (log.name === 'RevenueClaimed') return { ...item, kind: 'Claimed', mine: same(a.holder, address), title: `${cap(nameFor(a.holder))} claimed income`, wei: BigInt(a.amount) };
-    if (log.name === 'Transfer' && same(a.from, address)) return { ...item, kind: 'Sent', mine: true, title: `You sent ${plural(Number(a.value), 'share')} to ${nameFor(a.to)}`, shares: Number(a.value) };
-    if (log.name === 'Transfer' && same(a.to, address)) return { ...item, kind: 'Received', mine: true, title: `${cap(nameFor(a.from))} sent you ${plural(Number(a.value), 'share')}`, shares: Number(a.value) };
+    if (log.name === 'Transfer' && same(a.from, address)) return { ...item, kind: 'Sent', mine: true, title: `You sent ${plural(Number(a.value), 'Sol Coin')} to ${nameFor(a.to)}`, shares: Number(a.value) };
+    if (log.name === 'Transfer' && same(a.to, address)) return { ...item, kind: 'Received', mine: true, title: `${cap(nameFor(a.from))} sent you ${plural(Number(a.value), 'Sol Coin')}`, shares: Number(a.value) };
     return [];
   }).reverse();
 }
@@ -128,7 +128,7 @@ function receipt(item, label) {
 }
 function feedRow(item, mine = false) {
   const [badge, kindName] = tones[item.kind];
-  const amount = item.wei === undefined ? plural(item.shares, 'share') : demoIdr(item.wei);
+  const amount = item.wei === undefined ? plural(item.shares, 'Sol Coin') : demoIdr(item.wei);
   const head = `<span class="feed-badge kind-${item.kind}" aria-hidden="true">${badge}</span><div class="feed-text"><div class="feed-title">${esc(item.title)}</div><div class="feed-meta">${mine ? amount : kindName} · ${when(item)}</div></div>`;
   if (mine) return `<div class="feed-row">${head}${receipt(item, item.title)}</div>`;
   return `<div class="feed-row">${head}<div class="feed-end"><div class="feed-amount"><strong>${amount}</strong><span>${eth(item.wei)}</span></div>${receipt(item, item.title)}</div></div>`;
@@ -178,14 +178,12 @@ function renderProject() {
   $('#project-content').hidden = !state;
   if (!state) return;
   const left = state.available, sold = 1000 - left, last = reports().at(-1);
-  $('#status-chip').textContent = left ? `Selling · ${fmt(left)} shares left` : 'Fully funded';
+  $('#status-chip').textContent = left ? `Selling · ${fmt(left)} Sol Coins left` : 'Fully funded';
   $('#last-kwh').textContent = last ? `${fmt(last.kwh)} kWh` : 'None yet';
   $('#last-label').textContent = last ? periodLabel(last.period) : 'First report pending';
   $('#sold-pct').textContent = pct(sold);
   $('#sold-count').textContent = fmt(sold);
   $('#left-count').textContent = fmt(left);
-  $('#sold-progress').setAttribute('aria-valuenow', sold);
-  $('#sold-fill').style.width = `${sold / 10}%`;
   document.querySelectorAll('[data-filter]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.filter === ui.filter)));
   const kind = { Purchases: 'Bought', Reports: 'Report', Claims: 'Claimed' }[ui.filter];
   const feed = activity().filter(item => ['Bought', 'Report', 'Claimed'].includes(item.kind) && (!kind || item.kind === kind)).slice(0, 20);
@@ -198,8 +196,8 @@ function renderBuy() {
   const left = state.available, last = reports().at(-1), q = whole(ui.qty), price = BigInt(q) * SHARE_PRICE;
   const connected = Boolean(address), operator = isOperator(), wrong = wrongNetwork();
   let error = '';
-  if (ui.qty !== '' && q < 1) error = 'Choose at least 1 share.';
-  else if (q > left) error = left ? `Only ${fmt(left)} shares are left.` : 'All 1,000 shares are sold.';
+  if (ui.qty !== '' && q < 1) error = 'Choose at least 1 Sol Coin.';
+  else if (q > left) error = left ? `Only ${fmt(left)} Sol Coins are left.` : 'All 1,000 Sol Coins are sold.';
   else if (connected && !operator && !wrong && price > state.ethBalance) error = `That's more than your ${simulation ? 'demo balance' : 'wallet'} holds (${balanceText()}).`;
   document.querySelectorAll('[data-preset]').forEach(button => button.setAttribute('aria-pressed', String(Number(button.dataset.preset) === q)));
   $('#qty-stepper').classList.toggle('invalid', Boolean(error));
@@ -212,7 +210,7 @@ function renderBuy() {
   $('#payout-estimate').hidden = !last;
   if (last) {
     const payout = BigInt(q) * last.deposited / 1000n;
-    $('#estimate-title').textContent = `${periodLabel(last.period).split(' ')[0]}'s payout for ${plural(q, 'share')}`;
+    $('#estimate-title').textContent = `${periodLabel(last.period).split(' ')[0]}'s payout for ${plural(q, 'Sol Coin')}`;
     $('#estimate-rp').textContent = demoIdr(payout);
     $('#estimate-eth').textContent = eth(payout);
   }
@@ -221,22 +219,23 @@ function renderBuy() {
   if (!left) { label = 'Sold out'; enabled = false; }
   else if (!connected) { label = 'Connect wallet to buy'; note = onSepolia() ? "You'll need a wallet with Sepolia test ETH." : 'Pick a demo wallet to start.'; faucet = onSepolia(); }
   else if (wrong) label = switchLabel();
-  else if (operator) { label = "Operator wallet can't buy"; enabled = false; note = `Switch to an investor ${usingMetaMask ? 'account' : 'wallet'} from the wallet menu to buy shares.`; }
-  else { label = q > 0 ? `Buy ${plural(q, 'share')}` : 'Buy shares'; enabled = q >= 1 && !error; faucet = onSepolia() && price > state.ethBalance; }
+  else if (operator) { label = "Operator wallet can't buy"; enabled = false; note = `Switch to an investor ${usingMetaMask ? 'account' : 'wallet'} from the wallet menu to buy Sol Coins.`; }
+  else { label = q > 0 ? `Buy ${plural(q, 'Sol Coin')}` : 'Buy Sol Coins'; enabled = q >= 1 && !error; faucet = onSepolia() && price > state.ethBalance; }
   setActionButton($('#buy-button'), 'buy', label, enabled);
   $('#buy-note').textContent = note;
   $('#buy-faucet').hidden = !faucet;
+  renderLedger();
 }
 function sendCheck() {
   const to = $('#send-to').value.trim(), raw = $('#send-qty').value, q = whole(raw), owned = state?.balance ?? 0;
   let toErr = '', qtyErr = '';
   if (to && !(/^0x[0-9a-fA-F]{40}$/.test(to) && isAddress(to))) toErr = "That doesn't look like a wallet address. It should start with 0x and have 42 characters.";
-  else if (same(to, ZeroAddress)) toErr = "Shares can't be sent to the zero address.";
+  else if (same(to, ZeroAddress)) toErr = "Sol Coins can't be sent to the zero address.";
   else if (same(to, address)) toErr = "That's your own address.";
-  else if (same(to, deployment?.operator)) toErr = "Shares can't be sent to the operator wallet.";
-  else if (to && simulation && !demoAccounts.slice(1).some(a => same(a, to))) toErr = 'In the simulation, send shares to the other demo investor.';
-  if (raw && q < 1) qtyErr = 'Enter at least 1 share.';
-  else if (q > owned) qtyErr = `You only have ${plural(owned, 'share')}.`;
+  else if (same(to, deployment?.operator)) toErr = "Sol Coins can't be sent to the operator wallet.";
+  else if (to && simulation && !demoAccounts.slice(1).some(a => same(a, to))) toErr = 'In the simulation, send Sol Coins to the other demo investor.';
+  if (raw && q < 1) qtyErr = 'Enter at least 1 Sol Coin.';
+  else if (q > owned) qtyErr = `You only have ${plural(owned, 'Sol Coin')}.`;
   return { to, q, toErr, qtyErr, ok: Boolean(to) && !toErr && q >= 1 && !qtyErr };
 }
 function renderPortfolio() {
@@ -265,15 +264,16 @@ function renderPortfolio() {
   setActionButton($('#claim-button'), 'claim', wrong ? switchLabel() : `Claim ${demoIdr(state.claimable)}`, canClaim);
   const next = state.lastPeriod ? `${periodLabel(nextPeriod(state.lastPeriod))} report` : 'first monthly report';
   $('#claim-none-text').textContent = `Your next payout arrives when the operator publishes the ${next}. We'll show it here as soon as it lands.`;
+  renderIncome();
   const check = sendCheck();
-  $('#send-owned').textContent = `You own ${plural(state.balance, 'share')}`;
+  $('#send-owned').textContent = `You own ${plural(state.balance, 'Sol Coin')}`;
   for (const [field, message] of [['to', check.toErr], ['qty', check.qtyErr]]) {
     $(`#send-${field}`).classList.toggle('invalid', Boolean(message));
     $(`#send-${field}`).setAttribute('aria-invalid', String(Boolean(message)));
     $(`#send-${field}-error`).textContent = message;
     $(`#send-${field}-error`).hidden = !message;
   }
-  setActionButton($('#send-button'), 'send', wrong ? switchLabel() : 'Send shares', wrong || (check.ok && state.balance > 0));
+  setActionButton($('#send-button'), 'send', wrong ? switchLabel() : 'Send Sol Coins', wrong || (check.ok && state.balance > 0));
   const other = hasDemoWallets() ? accounts.find((account, i) => i > 0 && !same(account, address)) : null;
   $('#send-demo').hidden = !other;
   if (other) { $('#send-demo').textContent = `Use ${labels[accounts.indexOf(other)]}'s demo address`; $('#send-demo').dataset.address = other; }
@@ -339,7 +339,7 @@ function renderOperator() {
   $('#last-published-note').textContent = last ? `Last published: ${periodLabel(last.period)}. Months must go in order.` : 'No reports yet. Start with your first month of production.';
   renderBreakdown();
   $('#reports-table').innerHTML = all.length
-    ? `<div class="table-scroll"><table class="report-table"><thead><tr><th scope="col">Month</th><th scope="col">kWh</th><th scope="col">Receipts</th><th scope="col">Costs</th><th scope="col">Reserve</th><th scope="col">Distributed</th><th scope="col">Per share</th><th scope="col"><span class="visually-hidden">Receipt</span></th></tr></thead><tbody>${all.reverse().map(r => `<tr><td>${periodLabel(r.period)}</td><td>${fmt(r.kwh)}</td><td>${idr(r.kwh * TARIFF_IDR)}</td><td>${idr(r.costs)}</td><td>${idr(r.reserve)}</td><td>${demoIdr(r.deposited)}</td><td>${demoIdr(r.deposited / 1000n)}</td><td>${receipt(r, `${periodLabel(r.period)} report`)}</td></tr>`).join('')}</tbody></table></div>`
+    ? `<div class="table-scroll"><table class="report-table"><thead><tr><th scope="col">Month</th><th scope="col">kWh</th><th scope="col">Receipts</th><th scope="col">Costs</th><th scope="col">Reserve</th><th scope="col">Distributed</th><th scope="col">Per Sol Coin</th><th scope="col"><span class="visually-hidden">Receipt</span></th></tr></thead><tbody>${all.reverse().map(r => `<tr><td>${periodLabel(r.period)}</td><td>${fmt(r.kwh)}</td><td>${idr(r.kwh * TARIFF_IDR)}</td><td>${idr(r.costs)}</td><td>${idr(r.reserve)}</td><td>${demoIdr(r.deposited)}</td><td>${demoIdr(r.deposited / 1000n)}</td><td>${receipt(r, `${periodLabel(r.period)} report`)}</td></tr>`).join('')}</tbody></table></div>`
     : `<div class="feed-empty"><div class="feed-empty-title">No reports yet</div><p>Your first monthly report will appear here once it's published. Shareholders can claim as soon as it confirms.</p></div>`;
   const hasProceeds = state.proceeds > 0n;
   $('#proceeds-rp').textContent = demoIdr(state.proceeds);
@@ -360,7 +360,7 @@ function renderMenu() {
 }
 function renderModal() {
   for (const name of ['choose', 'connecting', 'wrong', 'switching']) $(`#modal-${name}`).hidden = ui.modal !== name;
-  if (ui.modal === 'wrong') $('#modal-wrong-text').textContent = `Your wallet is on ${chainName(walletChainId)}. SuryaShare only works on ${onSepolia() ? 'the Sepolia test network' : 'the local test chain'}, so nothing here touches real money.`;
+  if (ui.modal === 'wrong') $('#modal-wrong-text').textContent = `Your wallet is on ${chainName(walletChainId)}. Sol Invictus only works on ${onSepolia() ? 'the Sepolia test network' : 'the local test chain'}, so nothing here touches real money.`;
   const dialog = $('#wallet-modal');
   if (ui.modal && !dialog.open) dialog.showModal();
   if (!ui.modal && dialog.open) dialog.close();
@@ -380,20 +380,167 @@ function applyMode() {
   $('#contract-link').hidden = !sepolia;
   if (sepolia) $('#contract-link').href = `https://sepolia.etherscan.io/address/${deployment.address}`;
   $('#modal-choose-text').textContent = simulation ? 'Pick a role. Each starts with Rp100,000,000 in demo money, saved in this browser tab only.'
-    : sepolia ? 'SuryaShare runs on the Sepolia test network. Nothing here uses real money.' : 'Pick a funded demo wallet on the local test chain, or connect MetaMask.';
+    : sepolia ? 'Sol Invictus runs on the Sepolia test network. Nothing here uses real money.' : 'Pick a funded demo wallet on the local test chain, or connect MetaMask.';
   $('#modal-faucet').hidden = !sepolia;
   $('#switch-network').textContent = switchLabel();
   $('#modal-wrong-title').textContent = switchLabel();
   $('#modal-switching-text').textContent = `Approve the switch to ${networkLabel()} in your wallet.`;
   if (simulation) {
-    $('#pf-no-wallet p').textContent = 'Pick a demo wallet to see its shares and income. Everything stays in this browser tab.';
-    $('#how-note').textContent = 'This build is a browser simulation: the solar project, money, shares and reports are simulated and saved in this tab only. No wallet or blockchain is involved.';
+    $('#pf-no-wallet p').textContent = 'Pick a demo wallet to see its Sol Coins and income. Everything stays in this browser tab.';
+    $('#how-note').textContent = 'This build is a browser simulation: the solar project, money, Sol Coins and reports are simulated and saved in this tab only. No wallet or blockchain is involved.';
   } else if (!sepolia) {
-    $('#pf-no-wallet p').textContent = 'Your shares and income live in your wallet. Connecting lets SuryaShare read them from the local test chain. It can\'t move anything without your approval.';
+    $('#pf-no-wallet p').textContent = 'Your Sol Coins and income live in your wallet. Connecting lets Sol Invictus read them from the local test chain. It can\'t move anything without your approval.';
     $('#how-note').textContent = 'The solar project and its reports are fictional. This build runs on a local test chain, so its transactions exist only on your computer. Rp1 of demo value equals 1 gwei of test ETH. That\'s a display scale, not an exchange rate.';
   }
   renderWalletOptions();
 }
+
+// Ownership ledger: one tile per Sol Coin on the project page
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const TOTAL = 1000, COLS = 40;
+const ledgerEl = $('#tiles'), tipEl = $('#tip');
+const tileEls = Array.from({ length: TOTAL }, () => document.createElement('i'));
+ledgerEl.append(...tileEls);
+const ledger = { kinds: [], geo: null, mx: -1e4, my: -1e4, rippling: false, painting: false, mine: undefined, owner: undefined, reports: undefined };
+function renderLedger() {
+  if (!state) return;
+  const sold = TOTAL - state.available, mine = address && !isOperator() ? Math.min(state.balance, sold) : 0;
+  const pick = Math.min(whole(ui.qty), state.available);
+  const fresh = ledger.owner === address && ledger.mine !== undefined && mine > ledger.mine ? mine - ledger.mine : 0;
+  for (let i = 0; i < TOTAL; i++) {
+    const kind = i < sold - mine ? 'sold' : i < sold ? 'mine' : i < sold + pick ? 'pick' : '';
+    if (ledger.kinds[i] !== kind) { ledger.kinds[i] = kind; tileEls[i].className = kind; }
+  }
+  for (let k = 0; k < fresh; k++) {
+    const tile = tileEls[sold - 1 - k];
+    tile.classList.add('fresh'); tile.style.animationDelay = `${Math.min(k * 7, 900)}ms`;
+    setTimeout(() => { tile.classList.remove('fresh'); tile.style.animationDelay = ''; }, 1600);
+  }
+  const reportCount = reports().length;
+  if (ledger.reports !== undefined && reportCount > ledger.reports) waveTiles();
+  ledger.reports = reportCount; ledger.mine = mine; ledger.owner = address;
+  ledgerEl.setAttribute('aria-label', `${fmt(sold)} of 1,000 Sol Coins bought${mine ? `, ${fmt(mine)} of them yours` : ''}`);
+}
+function waveTiles() {
+  if (reduceMotion) return;
+  tileEls.forEach((tile, i) => { tile.classList.remove('wave'); void tile.offsetWidth; tile.style.animationDelay = `${(i % COLS) * 14 + Math.floor(i / COLS) * 10}ms`; tile.classList.add('wave'); });
+  setTimeout(() => tileEls.forEach(tile => { tile.classList.remove('wave'); tile.style.animationDelay = ''; }), 1800);
+}
+function tileAt(x, y) {
+  const r = ledgerEl.getBoundingClientRect(), rows = TOTAL / COLS;
+  const col = Math.min(COLS - 1, Math.max(0, Math.floor((x - r.left - 4) / ((r.width - 8) / COLS))));
+  const row = Math.min(rows - 1, Math.max(0, Math.floor((y - r.top - 4) / ((r.height - 8) / rows))));
+  return row * COLS + col;
+}
+function paintTo(i) {
+  if (!state?.available) return;
+  setQty(Math.min(state.available, Math.max(1, i - (TOTAL - state.available) + 1)));
+}
+function showTip(text, x, y) {
+  tipEl.textContent = text; tipEl.classList.add('on');
+  tipEl.style.left = `${Math.min(Math.max(8, x + 14), innerWidth - tipEl.offsetWidth - 8)}px`; tipEl.style.top = `${y + 18}px`;
+}
+function ripple() {
+  ledger.geo ??= tileEls.map(tile => ({ x: tile.offsetLeft + tile.offsetWidth / 2, y: tile.offsetTop + tile.offsetHeight / 2 }));
+  let moving = false;
+  tileEls.forEach((tile, i) => {
+    const g = ledger.geo[i], target = 1 + .9 * Math.max(0, 1 - Math.hypot(g.x - ledger.mx, g.y - ledger.my) / 78) ** 2, cur = tile._scale ?? 1;
+    const next = Math.abs(target - cur) < .004 ? target : cur + (target - cur) * .35;
+    if (next !== cur) { tile._scale = next; tile.style.scale = next === 1 ? '' : next.toFixed(3); moving = true; }
+  });
+  if (moving) requestAnimationFrame(ripple); else ledger.rippling = false;
+}
+const kickRipple = () => { if (!reduceMotion && !ledger.rippling) { ledger.rippling = true; requestAnimationFrame(ripple); } };
+ledgerEl.addEventListener('pointerdown', event => {
+  if (!state || event.button > 0) return;
+  const i = tileAt(event.clientX, event.clientY);
+  if (i < TOTAL - state.available) return;
+  ledger.painting = true; ledgerEl.setPointerCapture(event.pointerId); paintTo(i);
+});
+ledgerEl.addEventListener('pointermove', event => {
+  const r = ledgerEl.getBoundingClientRect(), i = tileAt(event.clientX, event.clientY), kind = ledger.kinds[i];
+  ledger.mx = event.clientX - r.left; ledger.my = event.clientY - r.top;
+  if (ledger.painting) paintTo(i);
+  const name = `Sol Coin #${String(i + 1).padStart(4, '0')}`;
+  showTip(kind === 'mine' ? `${name} · Yours` : kind === 'sold' ? `${name} · Held by another investor` : `${name} · Available · ${idr(100000)}`, event.clientX, event.clientY);
+  if (event.pointerType === 'mouse') kickRipple();
+});
+ledgerEl.addEventListener('pointerleave', () => { ledger.mx = ledger.my = -1e4; tipEl.classList.remove('on'); kickRipple(); });
+for (const type of ['pointerup', 'pointercancel']) ledgerEl.addEventListener(type, () => { ledger.painting = false; });
+addEventListener('resize', () => { ledger.geo = null; });
+
+function burst(x, y) {
+  if (reduceMotion) return;
+  for (let i = 0; i < 22; i++) {
+    const dot = document.createElement('i'), angle = Math.random() * Math.PI * 2, speed = 90 + Math.random() * 150;
+    dot.className = 'confetti'; dot.style.left = `${x}px`; dot.style.top = `${y}px`; dot.style.background = ['#FABD3D', '#E95C05', '#F59A2B', '#FFFFFF'][i % 4];
+    document.body.append(dot);
+    dot.animate([{ transform: 'translate(0, 0) scale(1)', opacity: 1 }, { transform: `translate(${Math.cos(angle) * speed}px, ${Math.sin(angle) * speed - 60}px) scale(.2)`, opacity: 0 }], { duration: 900 + Math.random() * 400, easing: 'cubic-bezier(.2, .8, .3, 1)' }).onfinish = () => dot.remove();
+  }
+}
+
+// Income: how a month's sunshine becomes money in your wallet (My Sol Coins page)
+const inc = { whatIf: null, run: 0, played: false };
+const incNodes = [...document.querySelectorAll('#inc-pipe .inc-node')], incStops = ['12.5%', '37.5%', '62.5%', '87.5%'];
+const shortHash = hash => hash.startsWith('0x') ? short(hash) : hash;
+function incomeModel() {
+  const last = reports().at(-1), kwh = inc.whatIf ?? last?.kwh ?? 1200, costs = last?.costs ?? 420000, reserve = last?.reserve ?? 250000;
+  const receipts = kwh * TARIFF_IDR, dist = receipts - costs - reserve;
+  return { last, kwh, costs, reserve, receipts, dist, ok: dist > 0, perCoin: dist > 0 ? dist / 1000 : 0 };
+}
+function renderIncome() {
+  const m = incomeModel(), live = Boolean(m.last) && inc.whatIf === null, held = state.balance;
+  $('#inc-period').textContent = live ? `Latest report · ${periodLabel(m.last.period)}` : m.last ? 'What if · you choose the month' : 'Example month · no report yet';
+  $('#inc-kwh').textContent = `${fmt(m.kwh)} kWh`;
+  const slider = $('#inc-slider');
+  slider.min = Math.min(300, m.last?.kwh ?? 300); slider.max = Math.max(1600, m.last?.kwh ?? 1600); slider.value = m.kwh;
+  $('#inc-reset').hidden = inc.whatIf === null;
+  $('#inc-reset').textContent = m.last ? 'Back to latest report' : 'Back to the example';
+  $('#inc-help').textContent = live ? 'This is the latest report recorded on the blockchain. Slide to see what a different month would pay you.' : 'Preview only. Nothing is sent to the blockchain.';
+  const base = Math.max(m.receipts, 1), costsPct = Math.min(m.costs, m.receipts) / base * 100, reservePct = Math.min(m.reserve, Math.max(0, m.receipts - m.costs)) / base * 100;
+  $('#inc-bar-c').style.width = `${costsPct}%`; $('#inc-bar-r').style.width = `${reservePct}%`; $('#inc-bar-d').style.width = `${Math.max(0, 100 - costsPct - reservePct)}%`;
+  $('#inc-rec').textContent = idr(m.receipts);
+  $('#inc-dist').textContent = idr(Math.max(0, m.dist));
+  $('#inc-costs-lbl').textContent = `Costs ${idr(m.costs)}`;
+  $('#inc-reserve-lbl').textContent = `Reserve ${idr(m.reserve)}`;
+  $('#inc-err').hidden = m.ok;
+  $('#inc-err').textContent = `Costs and reserve (${idr(m.costs + m.reserve)}) are higher than this month's receipts, so there's nothing to share.`;
+  $('#inc-n0').textContent = `${fmt(m.kwh)} kWh`;
+  $('#inc-n1').textContent = m.ok ? `${idr(m.dist)} to share` : 'Nothing to share';
+  $('#inc-n2').textContent = m.ok ? `${idr(m.perCoin)} per coin` : '—';
+  $('#inc-n3').textContent = !m.ok ? '—' : held ? `${idr(held * m.perCoin)} for ${plural(held, 'coin')}` : 'You hold no Sol Coins';
+  $('#inc-block').hidden = !live;
+  if (live) {
+    $('#inc-block-text').textContent = `Block ${fmt(m.last.block)} · ${shortHash(m.last.hash)} · confirmed`;
+    $('#inc-block-receipt').innerHTML = receipt(m.last, `${periodLabel(m.last.period)} report`);
+  }
+}
+function incomeStatic() {
+  inc.run++; inc.played = true;
+  const lit = incomeModel().ok ? 4 : 2, packet = $('#inc-packet');
+  incNodes.forEach((node, i) => node.classList.toggle('on', i < lit));
+  packet.classList.add('go'); packet.style.left = incStops[lit - 1];
+  document.querySelectorAll('#inc-pips i').forEach(pip => pip.classList.add('on'));
+}
+async function playIncome() {
+  if (reduceMotion) { incomeStatic(); return; }
+  const run = ++inc.run, m = incomeModel(), live = Boolean(m.last) && inc.whatIf === null, packet = $('#inc-packet');
+  const pause = ms => new Promise(resolve => setTimeout(resolve, ms)), pips = [...document.querySelectorAll('#inc-pips i')];
+  const step = i => { incNodes[i].classList.add('on'); packet.classList.add('go'); packet.style.left = incStops[i]; };
+  inc.played = true;
+  incNodes.forEach(node => node.classList.remove('on')); pips.forEach(pip => pip.classList.remove('on')); packet.classList.remove('go'); packet.style.left = incStops[0];
+  step(0); await pause(800); if (run !== inc.run) return;
+  step(1); await pause(900); if (run !== inc.run) return;
+  if (!m.ok) return;
+  if (live) for (const pip of pips) { pip.classList.add('on'); await pause(450); if (run !== inc.run) return; }
+  step(2); await pause(900); if (run !== inc.run) return;
+  step(3);
+}
+$('#inc-slider').oninput = event => { inc.whatIf = Number(event.target.value); renderIncome(); incomeStatic(); };
+$('#inc-reset').onclick = () => { inc.whatIf = null; renderIncome(); playIncome(); };
+$('#inc-replay').onclick = () => playIncome();
+// Play the income story once, when it first scrolls into view.
+new IntersectionObserver(entries => { if (!inc.played && entries.some(entry => entry.isIntersecting)) playIncome(); }, { threshold: .4 }).observe($('#income'));
 
 // Dialogs
 function openModal(name) { closeMenu(); ui.modal = name; renderModal(); }
@@ -543,7 +690,7 @@ async function connectMetaMask() {
   } catch (error) {
     if (attempt !== connectAttempt) return;
     ui.modal = 'choose'; renderModal();
-    if (isRejection(error)) dismissLater(pushToast({ status: 'rejected', title: 'Connection cancelled', body: 'Nothing was shared with SuryaShare.' }), 7000);
+    if (isRejection(error)) dismissLater(pushToast({ status: 'rejected', title: 'Connection cancelled', body: 'Nothing was shared with Sol Invictus.' }), 7000);
     else notify(error, "Couldn't connect");
   }
 }
@@ -594,7 +741,7 @@ function disconnect() {
   if (usingMetaMask) walletProvider?.request({ method: 'wallet_revokePermissions', params: [{ eth_accounts: {} }] }).catch(() => {});
   ui.modal = null;
   resetWallet();
-  info('Disconnected', simulation ? 'Pick a demo wallet to continue.' : 'Your wallet is no longer connected to SuryaShare.');
+  info('Disconnected', simulation ? 'Pick a demo wallet to continue.' : 'Your wallet is no longer connected to Sol Invictus.');
 }
 async function copyAddress() {
   if (!address) return;
@@ -660,14 +807,16 @@ $('#buy-form').onsubmit = event => {
   if (wrongNetwork()) { openModal('wrong'); return; }
   const q = whole(ui.qty);
   if (isOperator() || q < 1 || q > state.available) return;
-  transact('buy', `Buy ${plural(q, 'share')}`, c => c.buyShares(q, { value: BigInt(q) * SHARE_PRICE }),
-    () => `You now own ${plural(state.balance, 'share')}, ${pct(state.balance)} of the project.`);
+  transact('buy', `Buy ${plural(q, 'Sol Coin')}`, c => c.buyShares(q, { value: BigInt(q) * SHARE_PRICE }),
+    () => `You now own ${plural(state.balance, 'Sol Coin')}, ${pct(state.balance)} of the project.`);
 };
 $('#claim-button').onclick = () => {
   if (wrongNetwork()) { openModal('wrong'); return; }
   const amount = state?.claimable ?? 0n;
   if (!amount) return;
-  transact('claim', `Claim ${demoIdr(amount)}`, c => c.claimRevenue(), () => `${demoIdr(amount)} (${eth(amount)}) is in your ${simulation ? 'demo balance' : 'wallet'}.`);
+  const rect = $('#claim-button').getBoundingClientRect();
+  transact('claim', `Claim ${demoIdr(amount)}`, c => c.claimRevenue(), () => `${demoIdr(amount)} (${eth(amount)}) is in your ${simulation ? 'demo balance' : 'wallet'}.`)
+    .then(claimed => { if (claimed) burst(rect.left + rect.width / 2, rect.top + rect.height / 2); });
 };
 $('#send-form').oninput = event => {
   if (event.target.id === 'send-qty') event.target.value = digits(event.target.value, 4);
@@ -680,8 +829,8 @@ $('#send-form').onsubmit = async event => {
   if (wrongNetwork()) { openModal('wrong'); return; }
   const check = sendCheck();
   if (!check.ok || !address || isOperator()) return;
-  const sent = await transact('send', `Send ${plural(check.q, 'share')}`, c => c.transfer(check.to, check.q),
-    () => `${plural(check.q, 'share')} ${check.q === 1 ? 'is' : 'are'} now with ${nameFor(check.to)}. Income you earned before sending stays with you.`);
+  const sent = await transact('send', `Send ${plural(check.q, 'Sol Coin')}`, c => c.transfer(check.to, check.q),
+    () => `${plural(check.q, 'Sol Coin')} ${check.q === 1 ? 'is' : 'are'} now with ${nameFor(check.to)}. Income you earned before sending stays with you.`);
   if (sent) { $('#send-to').value = ''; $('#send-qty').value = ''; renderPortfolio(); }
 };
 $('#report-form').oninput = event => {
@@ -695,7 +844,7 @@ $('#report-form').onsubmit = event => {
   const r = breakdown();
   if (!r.ok) return;
   transact('publish', `Publish ${periodLabel(r.period)} report`, c => c.publishReport(r.period, r.kwh, r.costs, r.reserve, { value: BigInt(r.dist) * GWEI }),
-    () => `${idr(r.dist)} is now claimable by shareholders, ${idr(r.dist / 1000)} per share.`);
+    () => `${idr(r.dist)} is now claimable by shareholders, ${idr(r.dist / 1000)} per Sol Coin.`);
 };
 $('#withdraw-button').onclick = () => {
   if (wrongNetwork()) { openModal('wrong'); return; }
@@ -738,7 +887,7 @@ async function initialize() {
     state = null;
     loadError = deployment?.chainId === SEPOLIA
       ? `Sepolia could not be reached. Reload to retry. ${errorMessage(error)}`
-      : `Local demo is not connected. Run npm start in the SuryaShare folder, then reload. ${errorMessage(error)}`;
+      : `Local demo is not connected. Run npm start in the Sol Invictus folder, then reload. ${errorMessage(error)}`;
     render();
   }
 }

@@ -6,7 +6,7 @@ const networks = {
     blockExplorerUrls: ['https://sepolia.etherscan.io'],
   },
   31337: {
-    chainId: '0x7a69', chainName: 'SuryaShare Local',
+    chainId: '0x7a69', chainName: 'Sol Invictus Local',
     nativeCurrency: { name: 'Test Ether', symbol: 'ETH', decimals: 18 },
     rpcUrls: ['http://127.0.0.1:8545'],
   },

@@ -2,9 +2,9 @@
 
 **Own the sunshine. Share the future.**
 
-This repository is a fresh snapshot of the local SuryaShare prototype. Earlier development history is available in [geraldadli/SuryaShare](https://github.com/geraldadli/SuryaShare). The current website and deployed SURYA contract retain their SuryaShare names. Earlier work predates this repository; migration does not reset its development timeline.
+This repository is a fresh snapshot of the local Sol Invictus prototype, originally developed as SuryaShare. Earlier development history is available in [geraldadli/SuryaShare](https://github.com/geraldadli/SuryaShare). Earlier work predates this repository; migration does not reset its development timeline.
 
-A hackathon prototype for shared solar ownership. The [public website](https://geraldadli.github.io/SOL-INVICTUS/) connects to **Ethereum Sepolia**: buy SURYA shares, publish sample solar income, transfer shares, and claim test ETH using MetaMask.
+A hackathon prototype for shared solar ownership. The [public website](https://geraldadli.github.io/SOL-INVICTUS/) connects to **Ethereum Sepolia**: buy Sol Coins (SOLC), publish sample solar income, transfer shares, and claim test ETH using MetaMask.
 
 Solar assets and reports are fictional. Transactions are real testnet transactions. No real money, hardware, utilities, fiat payments, or legal ownership rights are connected.
 
@@ -20,26 +20,26 @@ The deployed executable code was compared with the project source compiled with 
 
 ## Demo with Eden and Jacob
 
-SuryaShare explicitly selects MetaMask through EIP-6963 discovery; other wallet extensions are not used. Both accounts can live in one MetaMask. Each needs Sepolia test ETH for gas. The deploying account is permanently the operator; it cannot buy shares.
+Sol Invictus explicitly selects MetaMask through EIP-6963 discovery; other wallet extensions are not used. Both accounts can live in one MetaMask. Each needs Sepolia test ETH for gas. The deploying account is permanently the operator; it cannot buy Sol Coins.
 
 1. Select **Jacob** in MetaMask, open the website, and choose **Connect MetaMask**.
-2. Buy **100 shares** for **0.01 Sepolia ETH** plus gas. This represents Rp10,000,000 in demo units and 10% of the project.
+2. Buy **100 Sol Coins** for **0.01 Sepolia ETH** plus gas. This represents Rp10,000,000 in demo units and 10% of the project.
 3. Switch to **Eden** with **Switch MetaMask account** in the wallet menu; the site follows the selected account. Open **Operator lab**, which appears in the navigation for the operator.
 4. Enter **4,000 kWh**, **Rp800,000 costs**, and **Rp200,000 reserve**, using a month later than the last published report. Publish and confirm the **0.005 Sepolia ETH** income deposit plus gas.
-5. Switch back to **Jacob** and open **My shares**. Claim **0.0005 Sepolia ETH**, shown as Rp500,000 in demo income. Gas is paid separately.
+5. Switch back to **Jacob** and open **My Sol Coins**. Claim **0.0005 Sepolia ETH**, shown as Rp500,000 in demo income. Gas is paid separately.
 6. The site checks for new activity every 30 seconds; use the **Refresh** icon on the Activity card to pick up transactions made by another account or through Remix right away. Receipts link to Sepolia Etherscan.
 
-Sending ETH directly to Jacob or to the earlier SmartWallet does not buy SURYA shares. Use this site's purchase action. The old SmartWallet is not part of this integration.
+Sending ETH directly to Jacob or to the earlier SmartWallet does not buy Sol Coins (SOLC). Use this site's purchase action. The old SmartWallet is not part of this integration.
 
 ## How income works
 
-The operator deposits simulated electricity income after costs and reserves. Holders accrue income in proportion to their shares at that moment and claim it themselves. Claiming does not consume shares or automatically increase their price. Purchase proceeds are separate from income deposits.
+The operator deposits simulated electricity income after costs and reserves. Holders accrue income in proportion to their Sol Coins at that moment and claim it themselves. Claiming does not consume shares or automatically increase their price. Purchase proceeds are separate from income deposits.
 
-There are 1,000 whole SURYA shares at 0.0001 test ETH each. Rp1 demo IDR = 1 gwei is only a display scale, not a real exchange rate. Unsold shares held by the operator also receive income. Transferring shares does not transfer previously accrued income and does not include resale payment.
+There are 1,000 whole Sol Coins (SOLC) at 0.0001 test ETH each. Rp1 demo IDR = 1 gwei is only a display scale, not a real exchange rate. Unsold Sol Coins held by the operator also receive income. Transferring Sol Coins does not transfer previously accrued income and does not include resale payment.
 
 ## Run and verify
 
-Use Node.js 24 and npm in `D:\Project-Website\SuryaShare`:
+Use Node.js 24 and npm in `D:\Workspace\SOL-INVICTUS`:
 
 ```sh
 npm ci

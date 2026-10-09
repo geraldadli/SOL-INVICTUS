@@ -47,5 +47,5 @@ try {
   await new Promise((resolve, reject) => deploy.on('exit', code => code === 0 ? resolve() : reject(new Error('Deployment failed.'))));
   const app = launch(['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '5173', '--strictPort']);
   app.on('exit', code => { if (!stopping) stop(code ?? 1); });
-  console.log('\nSuryaShare demo: http://127.0.0.1:5173\nChoose Alice, buy 100 shares, then use the operator to publish income.\nCtrl+C stops the app. Restarting creates a fresh local demo.\n');
+  console.log('\nSol Invictus demo: http://127.0.0.1:5173\nChoose Alice, buy 100 shares, then use the operator to publish income.\nCtrl+C stops the app. Restarting creates a fresh local demo.\n');
 } catch (error) { console.error(error.message); stop(1); }

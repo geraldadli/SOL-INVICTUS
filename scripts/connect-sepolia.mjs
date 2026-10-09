@@ -13,7 +13,7 @@ try {
   if (!receipt || receipt.status !== 1 || !receipt.contractAddress) throw new Error('A confirmed, successful contract deployment is required.');
   const artifact = compile();
   const tx = await provider.getTransaction(hash);
-  if (tx.data.toLowerCase() !== artifact.bytecode.toLowerCase()) throw new Error('This transaction did not deploy the current SuryaShare contract.');
+  if (tx.data.toLowerCase() !== artifact.bytecode.toLowerCase()) throw new Error('This transaction did not deploy the current Sol Invictus contract.');
   const contract = new Contract(receipt.contractAddress, artifact.abi, provider);
   const operator = await contract.operator();
   if (operator.toLowerCase() !== receipt.from.toLowerCase() || await contract.totalSupply() !== 1000n) throw new Error('Contract verification failed.');
