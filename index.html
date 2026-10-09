@@ -6,7 +6,9 @@
   <meta name="description" content="Buy Sol Coins of a fictional rooftop solar project in Cikarang, West Java, and claim your part of its monthly income on the Ethereum Sepolia testnet. A hackathon demo." />
   <meta name="theme-color" content="#FFF4E4" />
   <title>Sol Invictus — Own the sunshine.</title>
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" href="/favicon.png" type="image/png" sizes="192x192" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Young+Serif&display=swap" />
@@ -34,7 +36,7 @@
   <a class="skip-link" href="#main-content">Skip to content</a>
   <div class="demo-banner"><span class="demo-tag">DEMO</span><span id="banner-text">Sepolia testnet. Fictional asset. No real money. No legal ownership rights.</span></div>
   <header class="site-header">
-    <a class="brand" href="#home" aria-label="Sol Invictus home"><span class="brand-mark" aria-hidden="true"></span>Sol Invictus</a>
+    <a class="brand" href="#home" aria-label="Sol Invictus home"><img class="brand-mark" src="/logo.png" alt="" width="28" height="28" />Sol Invictus</a>
     <nav class="main-nav" aria-label="Main">
       <a href="#home" data-page="home" title="Home"><svg class="icon" aria-hidden="true"><use href="#i-home" /></svg><span class="nav-label">Home</span></a>
       <a href="#project" data-page="project" title="Project"><svg class="icon" aria-hidden="true"><use href="#i-sun" /></svg><span class="nav-label">Project</span></a>
@@ -184,7 +186,7 @@
           <div class="skeleton sk-claim"></div>
         </div>
         <div id="pf-no-wallet" class="empty-card" hidden>
-          <span class="big-mark" aria-hidden="true"></span>
+          <img class="big-mark" src="/logo.png" alt="" width="64" height="64" />
           <h2>Connect a wallet to see your Sol Coins</h2>
           <p>Your Sol Coins and income live in your wallet. Connecting lets Sol Invictus read them from Sepolia. It can't move anything without your approval.</p>
           <button type="button" class="btn btn-inline" data-connect>Connect wallet</button>
@@ -276,24 +278,38 @@
         </div>
         <div id="op-loading" hidden><div class="skeleton sk-card"></div></div>
         <div id="op-content" hidden>
-          <div class="page-head">
-            <div><h1>Operator lab</h1><div class="page-sub">Publish monthly reports and manage sale proceeds</div></div>
-            <span class="operator-badge"><b>OPERATOR</b><span id="op-address"></span></span>
+          <div class="op-head">
+            <div class="op-eyebrow"><i aria-hidden="true"></i>Operator console</div>
+            <h1 id="op-greeting">Good evening, operator</h1>
+            <p class="op-sub" id="op-sub"></p>
           </div>
-          <section class="card reporting-card">
-            <div id="operator-reporting-status" aria-live="polite"></div>
-            <div id="reporting-controls" hidden>
-              <button type="button" id="pause-purchases" class="btn btn-md btn-outline">Pause purchases</button>
-              <p class="field-help">Removing a manual pause does not override an overdue report. The operator wallet is fixed; wallet recovery is not included.</p>
-              <div id="simulation-clock" hidden>
-                <p class="field-help">Simulation clock controls</p>
-                <div class="reporting-actions">
-                  <button type="button" id="advance-report-clock" class="btn btn-md btn-outline">Advance to next report opening</button>
-                  <button type="button" id="advance-overdue-clock" class="btn btn-md btn-outline">Advance past reporting deadline</button>
-                </div>
-              </div>
+
+          <section class="op-stats" aria-label="Project overview">
+            <div class="card op-stat">
+              <div class="op-stat-label">Coins sold</div>
+              <div class="op-stat-value"><span id="op-sold">0</span><small> / 1,000</small></div>
+              <div class="op-cells" id="op-cells" aria-hidden="true"></div>
+              <div class="op-stat-note" id="op-sold-note"></div>
+            </div>
+            <div class="card op-stat">
+              <div class="op-stat-label">Income distributed</div>
+              <div class="op-stat-value" id="op-income">Rp0</div>
+              <svg class="op-spark" id="op-spark" viewBox="0 0 120 30" preserveAspectRatio="none" aria-hidden="true"></svg>
+              <div class="op-stat-note" id="op-income-note"></div>
+            </div>
+            <div class="card op-stat">
+              <div class="op-stat-label">Sale proceeds held</div>
+              <div class="op-stat-value" id="op-held">Rp0</div>
+              <div class="op-stat-note op-stat-note-gap" id="op-held-note"></div>
+            </div>
+            <div class="card op-stat">
+              <div class="op-stat-label">Reporting</div>
+              <div class="op-stat-pill"><span class="op-state" id="op-state"><i aria-hidden="true"></i><span id="op-state-text">—</span></span></div>
+              <div class="op-track" aria-hidden="true"><span id="op-track-fill"></span><b id="op-track-dot"></b></div>
+              <div class="op-track-labels"><span id="op-track-open"></span><span id="op-track-due"></span></div>
             </div>
           </section>
+<<<<<<< HEAD
           <div class="op-top">
             <form id="report-form" class="card report-card" novalidate>
               <h2>Monthly report</h2>
@@ -347,6 +363,102 @@
               <div class="proceeds-value" id="proceeds-rp">Rp0</div>
               <div class="tile-note" id="proceeds-eth">0 test ETH</div>
               <button type="button" id="withdraw-button" class="btn btn-md">Nothing to withdraw</button>
+=======
+
+          <div class="op-grid">
+            <div class="op-col">
+              <section class="card report-card" aria-labelledby="report-title">
+                <div class="card-head"><h2 id="report-title">Publish monthly report</h2><span class="op-hint" id="report-window-note"></span></div>
+                <div class="report-grid">
+                  <form id="report-form" class="op-steps" novalidate>
+                    <div class="op-step">
+                      <div class="op-step-n" aria-hidden="true">1</div>
+                      <div class="op-step-body">
+                        <div class="op-step-title">Pick the month &amp; generation<small>Months must be reported in order.</small></div>
+                        <label class="field-label" for="report-period">Reporting month</label>
+                        <select id="report-period" class="input" aria-describedby="last-published-note"></select>
+                        <div class="field-help field-help-small" id="last-published-note"></div>
+                        <label class="field-label" for="report-kwh">Electricity generated</label>
+                        <div class="input-wrap"><input id="report-kwh" class="input input-strong has-suffix" value="1265" inputmode="numeric" autocomplete="off" /><span class="input-suffix">kWh</span></div>
+                        <div class="op-chips" id="kwh-chips" hidden aria-label="Quick fill"></div>
+                        <div class="field-label" id="tariff-label">Tariff</div>
+                        <div class="input-static" aria-labelledby="tariff-label"><span>Rp1,500 / kWh</span><small>Fixed in the contract</small></div>
+                      </div>
+                    </div>
+                    <div class="op-step">
+                      <div class="op-step-n" aria-hidden="true">2</div>
+                      <div class="op-step-body">
+                        <div class="op-step-title">Costs &amp; reserve<small>Deducted before shareholders are paid.</small></div>
+                        <div class="field-pair">
+                          <div><label class="field-label" for="report-costs">Operating costs</label><div class="input-wrap"><span class="input-prefix">Rp</span><input id="report-costs" class="input input-strong has-prefix" value="420000" inputmode="numeric" autocomplete="off" /></div></div>
+                          <div><label class="field-label" for="report-reserve">Maintenance reserve</label><div class="input-wrap"><span class="input-prefix">Rp</span><input id="report-reserve" class="input input-strong has-prefix" value="250000" inputmode="numeric" autocomplete="off" /></div></div>
+                        </div>
+                      </div>
+                    </div>
+                  </form>
+
+                  <div class="statement" aria-live="polite">
+                    <div class="st-label">Statement preview</div>
+                    <div class="st-donut-row">
+                      <div class="st-donut" id="st-donut" style="--a:0%;--b:0%"><div class="st-donut-c"><b id="st-pct">0%</b><span>to holders</span></div></div>
+                      <div class="st-legend">
+                        <div><span><i class="sw-costs"></i>Costs</span><b id="bd-costs"></b></div>
+                        <div><span><i class="sw-reserve"></i>Reserve</span><b id="bd-reserve"></b></div>
+                        <div><span><i class="sw-dist"></i>Holders</span><b id="bd-holders"></b></div>
+                      </div>
+                    </div>
+                    <div id="bd-ok">
+                      <div class="st-big"><small>Amount to distribute</small><strong id="bd-dist"></strong><em>from <span id="bd-receipts"></span> electricity receipts (<span id="bd-receipts-note"></span>) · <span id="bd-dist-eth"></span> deposited with the report</em></div>
+                      <div class="st-per"><span>Per Sol Coin (÷ 1,000)</span><span><b id="bd-per-share"></b><small id="bd-per-share-eth"></small></span></div>
+                    </div>
+                    <div id="bd-bad" class="breakdown-error" aria-live="polite" hidden></div>
+                    <p id="zero-income-note" class="field-help" hidden></p>
+                    <div class="grow"></div>
+                    <button type="submit" form="report-form" id="publish-button" class="btn btn-lg btn-publish">Publish report</button>
+                    <div class="st-fine">You'll confirm once in your wallet. Shareholders can claim right after.</div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="card reports-card" aria-labelledby="reports-title">
+                <div class="card-head"><h2 id="reports-title">Published reports</h2><span class="op-hint" id="reports-count"></span></div>
+                <div id="reports-table"></div>
+              </section>
+            </div>
+
+            <div class="op-col">
+              <section class="card status-card" aria-labelledby="status-title">
+                <div class="card-head"><h2 id="status-title">Reporting schedule</h2></div>
+                <div id="operator-reporting-status" aria-live="polite"></div>
+                <div id="reporting-controls" hidden>
+                  <div class="op-switch-row">
+                    <div><h3 id="purchase-state">Accepting purchases</h3><p id="purchase-state-note"></p></div>
+                    <button type="button" id="pause-purchases" class="op-switch" role="switch" aria-checked="true" aria-labelledby="purchase-state"></button>
+                  </div>
+                  <p class="field-help field-help-small">Removing a manual pause does not override an overdue report. The operator wallet is fixed; wallet recovery is not included.</p>
+                  <details id="simulation-clock" class="sim-tools" hidden>
+                    <summary>Simulation clock</summary>
+                    <div class="sim-actions">
+                      <button type="button" id="advance-report-clock" class="btn btn-sm btn-soft">Advance to next report opening</button>
+                      <button type="button" id="advance-overdue-clock" class="btn btn-sm btn-soft">Advance past reporting deadline</button>
+                    </div>
+                  </details>
+                </div>
+              </section>
+
+              <section class="card proceeds-card" aria-labelledby="proceeds-title">
+                <div class="card-head"><h2 id="proceeds-title">Sale proceeds</h2></div>
+                <p class="card-text">What investors paid for Sol Coins, held by the contract until you withdraw it.</p>
+                <div class="proceeds-value" id="proceeds-rp">Rp0</div>
+                <div class="tile-note" id="proceeds-eth">0 test ETH</div>
+                <button type="button" id="withdraw-button" class="btn btn-sm btn-withdraw">Nothing to withdraw</button>
+              </section>
+
+              <section class="card op-activity" aria-labelledby="op-activity-title">
+                <div class="card-head"><h2 id="op-activity-title">Recent activity</h2></div>
+                <div id="op-feed"></div>
+              </section>
+>>>>>>> 12d590b (Updating: UI, Icons, and features refinement)
             </div>
           </div>
           <section id="operator-verification" class="card reporting-card" aria-live="polite"></section>
