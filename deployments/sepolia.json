@@ -5,6 +5,7 @@
   "chainId": 11155111,
   "rpcUrl": "https://ethereum-sepolia-rpc.publicnode.com",
   "blockNumber": 11876698,
+  "deploymentTransaction": "0xe925c1402033c7b1ef1c3b662d0b7e217dbe2f75ebee0798edb83964fc538ec4",
   "abi": [
     {
       "inputs": [],
@@ -809,6 +810,5 @@
       "stateMutability": "nonpayable",
       "type": "function"
     }
-  ],
-  "deploymentTransaction": "0xe925c1402033c7b1ef1c3b662d0b7e217dbe2f75ebee0798edb83964fc538ec4"
+  ]
 }

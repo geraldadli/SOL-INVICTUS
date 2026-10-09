@@ -2,58 +2,430 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Buy solar project shares. Join the blockchain. SuryaShare makes solar ownership a shared experience — a hackathon demo powered by Ethereum." />
-  <meta name="theme-color" content="#fff9df" />
-  <title>SuryaShare — Own the sunshine.</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="description" content="Buy Sol Coins of a fictional rooftop solar project in Cikarang, West Java, and claim your part of its monthly income on the Ethereum Sepolia testnet. A hackathon demo." />
+  <meta name="theme-color" content="#FFF4E4" />
+  <title>Sol Invictus — Own the sunshine.</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Young+Serif&display=swap" />
   <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
+  <svg class="sprite" aria-hidden="true">
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z" /></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></symbol>
+    <symbol id="i-pie" viewBox="0 0 24 24"><path d="M21 12A9 9 0 1 1 12 3v9z" /><path d="M15 3.5A9 9 0 0 1 20.5 9H15z" /></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.7M12 17h.01" /></symbol>
+    <symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3" /></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" /></symbol>
+    <symbol id="i-next" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></symbol>
+    <symbol id="i-ext" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9" /></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor" stroke="none" /></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7" /></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4M9 12h6M9 16h6" /></symbol>
+    <symbol id="i-chain" viewBox="0 0 24 24"><path d="M12 2l8 4.5v9L12 20l-8-4.5v-9z" /><path d="M12 11l8-4.5M12 11v9M12 11L4 6.5" /></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h13v4" /><path d="M3 7v11a2 2 0 0 0 2 2h14a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1H5a2 2 0 0 1-2-1z" /><circle cx="16.5" cy="14" r="1.2" /></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7L20 8.6" /><path d="M20 3.5v5.1h-5.1" /></symbol>
+  </svg>
   <a class="skip-link" href="#main-content">Skip to content</a>
+  <div class="demo-banner"><span class="demo-tag">DEMO</span><span id="banner-text">Sepolia testnet. Fictional asset. No real money. No legal ownership rights.</span></div>
   <header class="site-header">
-    <a class="brand" href="#home" aria-label="SuryaShare home"><img src="/favicon.svg" alt="" />SURYA<span>SHARE</span></a>
-    <nav aria-label="Main navigation"><a href="#project" data-page="project">Buy shares</a><a href="#how" data-page="how">How it works</a><a href="#portfolio" data-page="portfolio">My shares</a></nav>
-    <button id="wallet-button" class="wallet-button" type="button">Connect wallet <span>↗</span></button>
+    <a class="brand" href="#home" aria-label="Sol Invictus home"><span class="brand-mark" aria-hidden="true"></span>Sol Invictus</a>
+    <nav class="main-nav" aria-label="Main">
+      <a href="#home" data-page="home" title="Home"><svg class="icon" aria-hidden="true"><use href="#i-home" /></svg><span class="nav-label">Home</span></a>
+      <a href="#project" data-page="project" title="Project"><svg class="icon" aria-hidden="true"><use href="#i-sun" /></svg><span class="nav-label">Project</span></a>
+      <a href="#portfolio" data-page="portfolio" title="My Sol Coins"><svg class="icon" aria-hidden="true"><use href="#i-pie" /></svg><span class="nav-label">My Sol Coins</span></a>
+      <a href="#how" data-page="how" title="How it works"><svg class="icon" aria-hidden="true"><use href="#i-help" /></svg><span class="nav-label">How it works</span></a>
+      <a href="#operator" data-page="operator" title="Operator lab" data-operator-only hidden><svg class="icon" aria-hidden="true"><use href="#i-flask" /></svg><span class="nav-label">Operator lab</span></a>
+    </nav>
+    <div class="header-actions">
+      <button id="wrong-network" class="wrong-network" type="button" hidden><span class="dot" aria-hidden="true"></span><span class="wide-only">Wrong network</span><span class="narrow-only">Network</span></button>
+      <span id="network-pill" class="network-pill" title="Sepolia testnet"><span class="dot" aria-hidden="true"></span><span class="wide-only" id="network-name">Sepolia</span></span>
+      <div id="wallet-chip" class="wallet-chip" hidden>
+        <button id="wallet-menu-button" class="wallet-chip-main" type="button" aria-label="Wallet menu" aria-haspopup="dialog" aria-expanded="false"><span id="operator-tag" class="operator-tag wide-only" hidden>OPERATOR</span><span id="operator-dot" class="operator-dot narrow-only" hidden></span><span class="wide-only" id="wallet-address-wide"></span><span class="narrow-only" id="wallet-address-narrow"></span><svg class="icon icon-sm wide-only" aria-hidden="true"><use href="#i-down" /></svg></button>
+        <button id="copy-address" class="chip-copy wide-only" type="button" aria-label="Copy wallet address"><svg class="icon icon-copy" aria-hidden="true"><use href="#i-copy" /></svg></button>
+      </div>
+      <button id="connect-button" class="connect-button" type="button" data-connect><span class="wide-only">Connect wallet</span><span class="narrow-only">Connect</span></button>
+    </div>
   </header>
+
   <main id="main-content" tabindex="-1">
-    <div id="connection-error" class="notice error site-width" role="alert" hidden></div>
-    <section id="home-page" class="page">
-      <div class="hero site-width">
-        <div class="hero-copy"><span class="hero-badge">Blockchain for shared solar</span><h1>Own the<br>sunshine.<br><span>Share the future.</span></h1><p>Buy solar project shares. Join the blockchain.<br>Get your slice of demo energy income.</p><div class="hero-actions"><a class="primary-button" href="#project">Get solar shares <span>↗</span></a><a class="text-button" href="#how">Discover how it works <span>→</span></a></div><p class="demo-note"><span aria-hidden="true">✳</span> Hackathon demo. Test tokens. Real on-chain activity.</p></div>
-        <div class="hero-visual" aria-label="One SURYA token represents one of the project's 1,000 demo shares"><img class="hero-sun" src="/favicon.svg" alt="" /><div class="token-card"><div class="token-top"><span>SURYA</span><span aria-hidden="true">↗</span></div><div class="token-value">01<span> / 1,000</span></div><div class="token-bottom"><span>Your piece of<br>a brighter future.</span><span class="token-symbol" aria-hidden="true">☀</span></div></div><div class="ownership-label"><span aria-hidden="true">✓</span> Your shares. On the blockchain.</div></div>
+    <div id="load-error" class="load-error" role="alert" hidden></div>
+
+    <section id="home-page" class="page home">
+      <div class="home-top">
+        <div class="home-copy">
+          <div class="home-kicker">Cikarang Rooftop Solar · West Java</div>
+          <h1>Own the sunshine.<br>Share the future.</h1>
+          <div class="home-intro">
+            <a class="play-button" href="#how" aria-label="How it works"><svg class="icon" aria-hidden="true"><use href="#i-play" /></svg></a>
+            <p>Buy Sol Coins of a rooftop solar project in Cikarang, West Java, and claim your part of the income it earns each month, recorded on Ethereum.</p>
+          </div>
+        </div>
+        <div class="home-sun">
+          <div class="sun" aria-hidden="true"><div class="sun-glow"></div><div class="sun-rays"></div><div class="sun-disc"></div></div>
+        </div>
       </div>
-      <div class="journey-strip"><span>BUY SOLAR SHARES</span><span aria-hidden="true">✳</span><span>HOLD SURYA TOKENS</span><span aria-hidden="true">✳</span><span>CLAIM DEMO INCOME</span></div>
-      <section class="home-intro site-width"><div><span class="eyebrow">SOLAR OWNERSHIP, OPENED UP.</span><h2>A big idea.<br>A smaller buy-in.</h2></div><div><p>SuryaShare turns a solar project into digital shares you can buy, hold, and transfer. Every transaction leaves a record you can check.</p><a class="text-button" href="#project">Meet your first solar project <span>↗</span></a></div></section>
-    </section>
-    <section id="project-page" class="page site-width" hidden>
-      <div class="page-heading"><div><span class="eyebrow">YOUR FIRST SOLAR SHARE</span><h1>A little solar.<br>A lot of possibility.</h1></div><span class="pill">Demo project · Indonesia</span></div>
-      <article class="card" id="reporting-status" aria-live="polite"></article>
-      <div class="project-grid">
-        <article class="asset-card"><div class="asset-top"><span>CIKARANG / 001</span><span aria-hidden="true">✳</span></div><h2>Cikarang<br>Rooftop Solar</h2><p>A fictional rooftop project in West Java.<br>Built for you to explore shared ownership.</p><div class="asset-specs"><div><strong>1,000</strong><span>Total shares</span></div><div><strong>10 <small>kWp</small></strong><span>Model capacity</span></div></div><div class="asset-community"><span>Community share</span><strong id="community-ownership">—</strong><p id="sold-caption">Connecting…</p></div></article>
-        <article class="card purchase-card"><div class="section-heading"><h2>Make it yours.</h2><span class="pill">SURYA</span></div><div class="share-price">Rp100,000 <span>/ demo share</span></div><p class="price-note">Pay 0.0001 test ETH per share.</p><form id="buy-form"><label for="share-count">Choose your shares</label><div class="quantity-input"><button type="button" id="decrease-shares" aria-label="Decrease shares">−</button><input id="share-count" type="number" min="1" max="1000" step="1" value="100" required /><span>SURYA</span><button type="button" id="increase-shares" aria-label="Increase shares">+</button></div><div class="order-row"><span>Project share in this purchase</span><strong id="purchase-ownership">10.0%</strong></div><div class="order-row"><span>Demo total</span><strong id="purchase-total">Rp10,000,000</strong></div><button class="primary-button" id="buy-button" type="submit" disabled>Connecting…</button><p class="form-footnote" id="purchase-footnote">Test ETH only. No real money.</p></form><div class="funding-row"><span id="funding-label">0 of 1,000 shares purchased</span><strong id="funding-percent">0%</strong></div><progress id="funding-progress" max="1000" value="0" aria-label="Shares purchased"></progress></article>
+      <div class="home-bottom">
+        <div>
+          <div class="overline">How it works</div>
+          <div class="home-steps">
+            <a class="home-step" href="#how"><span class="home-step-n">1</span><span class="home-step-text">Buy<br>Sol Coins</span></a>
+            <span class="home-step-divider" aria-hidden="true"></span>
+            <a class="home-step" href="#how"><span class="home-step-n">2</span><span class="home-step-text">The project<br>earns</span></a>
+            <span class="home-step-divider" aria-hidden="true"></span>
+            <a class="home-step" href="#how"><span class="home-step-n">3</span><span class="home-step-text">Claim your<br>income</span></a>
+          </div>
+        </div>
+        <a class="project-cta" href="#project"><span class="cta-sun" aria-hidden="true"></span><span class="cta-text"><strong>Meet the project</strong><span class="cta-sub"><span id="home-sold">—</span> of 1,000 Sol Coins bought</span></span><span class="cta-arrow" aria-hidden="true"><svg class="icon icon-cta"><use href="#i-next" /></svg></span></a>
       </div>
-      <div class="project-summary"><div><span>Demo income deposited</span><strong id="project-revenue">—</strong></div><p>Buy shares, then visit My shares to see your holdings and claim available income.</p><a class="text-button" href="#portfolio">My shares <span>↗</span></a></div>
-      <article class="card activity-card"><div class="section-heading"><h2>On-chain activity</h2><button type="button" class="text-button" id="refresh-button">Refresh ↻</button></div><div id="project-activity" class="empty-state">Be the first to make your mark.</div></article>
     </section>
-    <section id="how-page" class="page site-width" hidden>
-      <div class="page-heading"><div><span class="eyebrow">FROM SUNLIGHT TO SHARED VALUE</span><h1>Energy connects us.<br>Blockchain brings us in.</h1><p>Solar projects, energy users, and shareholders — one transparent record.</p></div></div>
-      <div class="ecosystem" aria-label="Conceptual energy flow: solar projects to utilities to energy users. Our hackathon simulates this energy layer. An operator submits sample reports to SuryaShare's blockchain, where users buy shares and claim demo income.">
-        <div class="energy-lane"><span class="lane-title">THE ENERGY WORLD <span>Simulated in this demo</span></span><div class="energy-flow"><div class="energy-node"><span aria-hidden="true">☀</span><h3>Solar projects</h3></div><span class="flow-arrow" aria-hidden="true">→</span><div class="energy-node"><span aria-hidden="true">ϟ</span><h3>Grid & utilities</h3></div><span class="flow-arrow" aria-hidden="true">→</span><div class="energy-node"><span aria-hidden="true">⌂</span><h3>Energy users</h3></div></div></div>
-        <div class="report-bridge"><span aria-hidden="true">↓</span><p>Operator submits a sample energy report</p><span aria-hidden="true">↓</span></div>
-        <div class="blockchain-lane"><div class="chain-hub"><span class="eyebrow">THE SURYASHARE PLATFORM</span><h2>One shared record.</h2><p>Project reports · Share ownership · Income claims</p><span class="pill">Ethereum smart contract</span></div><div class="participation-bridge" aria-hidden="true">⇄</div><div class="shareholder-node"><span class="you-tag">YOU</span><h3>Buy. Hold. Participate.</h3><p>Get shares and claim your<br>piece of demo income.</p><a class="primary-button" href="#project">Join the demo <span>↗</span></a></div></div>
+
+    <section id="project-page" class="page" hidden>
+      <div class="container">
+        <div id="project-loading" class="skeleton-stack" aria-busy="true" aria-label="Loading project">
+          <div class="skeleton sk-hero"></div>
+          <div class="project-layout">
+            <div class="project-main"><div class="skeleton sk-stats"></div><div class="skeleton sk-card"></div><div class="skeleton sk-feed"></div></div>
+            <div class="skeleton sk-buy"></div>
+          </div>
+        </div>
+        <div id="project-content" hidden>
+          <div class="project-hero">
+            <div class="project-hero-text">
+              <span class="status-chip" id="status-chip">Selling</span>
+              <h1>Cikarang Rooftop Solar</h1>
+              <div class="project-meta"><span>Cikarang, West Java</span><a id="contract-link" class="ext-link" href="https://sepolia.etherscan.io/" target="_blank" rel="noopener noreferrer" hidden>View contract on Etherscan<svg class="icon icon-sm" aria-hidden="true"><use href="#i-ext" /></svg></a></div>
+            </div>
+            <div class="project-hero-sun"><div class="sun sun-small" aria-hidden="true"><div class="sun-rays"></div><div class="sun-disc"></div></div></div>
+          </div>
+          <section id="reporting-status" class="card reporting-card" aria-live="polite"></section>
+          <div class="project-layout">
+            <div class="project-main">
+              <div class="stat-grid">
+                <div class="stat"><div class="stat-label">Capacity</div><div class="stat-value">10 kWp</div></div>
+                <div class="stat"><div class="stat-label">Total Sol Coins</div><div class="stat-value">1,000</div></div>
+                <div class="stat"><div class="stat-label">Price per Sol Coin</div><div class="stat-value">Rp100,000</div><div class="stat-note">0.0001 test ETH</div></div>
+                <div class="stat"><div class="stat-label">Last report</div><div class="stat-value" id="last-kwh">None yet</div><div class="stat-note" id="last-label">First report pending</div></div>
+              </div>
+              <div class="card">
+                <div class="sold-row">
+                  <div><div class="card-label">Already bought</div><div class="sold-pct" id="sold-pct">0.0%</div></div>
+                  <div class="sold-counts"><div><span id="sold-count">0</span> of 1,000 Sol Coins</div><div class="sold-left"><span id="left-count">1,000</span> still available</div></div>
+                </div>
+                <div class="tiles" id="tiles" role="img" aria-label="1,000 Sol Coins, none bought yet"></div>
+                <div class="tiles-hint">Every tile is one Sol Coin. Drag across the grid to choose how many to buy.</div>
+                <div class="tiles-legend" aria-hidden="true">
+                  <span><i class="lg-sold"></i>Other holders</span>
+                  <span><i class="lg-mine"></i>Yours</span>
+                  <span><i class="lg-pick"></i>Your selection</span>
+                  <span><i class="lg-free"></i>Available</span>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-head">
+                  <div class="card-title"><h2 class="activity-title">Activity</h2><button type="button" class="icon-button" data-refresh aria-label="Refresh activity" title="Refresh"><svg class="icon" aria-hidden="true"><use href="#i-refresh" /></svg></button></div>
+                  <div class="filters" role="group" aria-label="Filter activity">
+                    <button type="button" class="chip-button" data-filter="All" aria-pressed="true">All</button>
+                    <button type="button" class="chip-button" data-filter="Purchases" aria-pressed="false">Purchases</button>
+                    <button type="button" class="chip-button" data-filter="Reports" aria-pressed="false">Reports</button>
+                    <button type="button" class="chip-button" data-filter="Claims" aria-pressed="false">Claims</button>
+                  </div>
+                </div>
+                <div id="project-feed"></div>
+              </div>
+            </div>
+            <div class="project-side">
+              <form id="buy-form" class="buy-card" novalidate>
+                <h2>Buy Sol Coins</h2>
+                <div class="buy-sub">Rp100,000 · 0.0001 test ETH per Sol Coin</div>
+                <div class="field-label" id="quick-pick-label">Quick pick</div>
+                <div class="presets" role="group" aria-labelledby="quick-pick-label">
+                  <button type="button" class="preset" data-preset="1" aria-pressed="false">1</button>
+                  <button type="button" class="preset" data-preset="10" aria-pressed="true">10</button>
+                  <button type="button" class="preset" data-preset="50" aria-pressed="false">50</button>
+                  <button type="button" class="preset" data-preset="100" aria-pressed="false">100</button>
+                </div>
+                <div class="stepper" id="qty-stepper">
+                  <button type="button" id="qty-dec" aria-label="Fewer Sol Coins">−</button>
+                  <label><input id="qty" value="10" inputmode="numeric" autocomplete="off" aria-label="Number of Sol Coins" aria-describedby="qty-error" /><span>Sol Coins</span></label>
+                  <button type="button" id="qty-inc" aria-label="More Sol Coins">+</button>
+                </div>
+                <div id="qty-error" class="field-error" role="alert" hidden></div>
+                <div class="buy-summary">
+                  <div class="buy-row"><span>You'd own</span><b><span id="own-pct">1.0%</span> of the project</b></div>
+                  <div class="buy-row buy-total"><span>You pay</span><span><span class="buy-total-rp" id="total-rp">Rp1,000,000</span><span class="buy-total-eth" id="total-eth">0.001 test ETH</span></span></div>
+                </div>
+                <div id="payout-estimate" class="estimate" hidden>
+                  <div class="estimate-title" id="estimate-title"></div>
+                  <div class="estimate-value"><strong id="estimate-rp"></strong><span id="estimate-eth"></span></div>
+                  <div class="estimate-note">Past income does not predict future income.</div>
+                </div>
+                <button type="submit" id="buy-button" class="btn btn-lg">Buy 10 Sol Coins</button>
+                <p class="buy-note"><span id="buy-note">Your wallet shows the network fee before you confirm.</span> <a id="buy-faucet" href="https://cloud.google.com/application/web3/faucet/ethereum/sepolia" target="_blank" rel="noopener noreferrer" hidden>Get free test ETH</a></p>
+              </form>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="three-steps"><article><span>01</span><h3>Pick your shares.</h3><p>Buy a piece of the demo project with test ETH.</p></article><article><span>02</span><h3>Make it on-chain.</h3><p>Hold SURYA tokens and verify your transactions.</p></article><article><span>03</span><h3>Share the upside.</h3><p>Claim simulated income based on the shares you held.</p></article></div>
-      <div class="demo-explainer"><h3>No panels required to try it.</h3><p>Energy data is simulated. Purchases, transfers, and claims run on our development blockchain. No hardware or utilities are connected.</p><a class="text-button" href="#operator">Open the demo lab <span>↗</span></a></div>
     </section>
-    <section id="portfolio-page" class="page site-width" hidden></section>
-    <section id="operator-page" class="page site-width" hidden></section>
+
+    <section id="portfolio-page" class="page" hidden>
+      <div class="container container-narrow">
+        <div class="page-head">
+          <div><h1>My Sol Coins</h1><div class="page-sub">Cikarang Rooftop Solar · <span id="portfolio-address">Not connected</span></div></div>
+        </div>
+        <div id="portfolio-loading" hidden>
+          <div class="tile-grid"><div class="skeleton sk-tile"></div><div class="skeleton sk-tile"></div><div class="skeleton sk-tile"></div></div>
+          <div class="skeleton sk-claim"></div>
+        </div>
+        <div id="pf-no-wallet" class="empty-card" hidden>
+          <span class="big-mark" aria-hidden="true"></span>
+          <h2>Connect a wallet to see your Sol Coins</h2>
+          <p>Your Sol Coins and income live in your wallet. Connecting lets Sol Invictus read them from Sepolia. It can't move anything without your approval.</p>
+          <button type="button" class="btn btn-inline" data-connect>Connect wallet</button>
+        </div>
+        <div id="pf-operator" class="empty-card" hidden>
+          <h2 class="flush">You're using the operator wallet</h2>
+          <p>The operator holds the unsold Sol Coins. Switch to an investor wallet to see a shareholder portfolio.</p>
+          <div class="empty-actions"><button type="button" class="btn btn-inline btn-compact" id="pf-switch">Use investor wallet</button><a class="btn btn-inline btn-compact btn-outline" href="#operator">Open Operator lab</a></div>
+        </div>
+        <div id="pf-empty" class="empty-card" hidden>
+          <div class="tiles9" aria-hidden="true"><span></span><span></span><span></span><span></span><span class="lit"></span><span></span><span></span><span></span><span></span></div>
+          <h2>No Sol Coins yet</h2>
+          <p>Buy your first Sol Coin of Cikarang Rooftop Solar from Rp100,000. Your income starts with the next monthly report.</p>
+          <a class="btn btn-inline" href="#project">Meet the project</a>
+        </div>
+        <div id="pf-full" hidden>
+          <div class="tile-grid">
+            <div class="tile"><div class="tile-label">Sol Coins owned</div><div class="tile-value tile-value-xl" id="my-shares">0</div><div class="tile-note tile-note-strong"><span id="my-pct">0.0%</span> of the project</div></div>
+            <div class="tile"><div class="tile-label">Value at issue price</div><div class="tile-value" id="my-value-rp">Rp0</div><div class="tile-note" id="my-value-eth">0 test ETH</div></div>
+            <div class="tile"><div class="tile-label">Income claimed so far</div><div class="tile-value" id="my-claimed-rp">Rp0</div><div class="tile-note" id="my-claimed-eth">0 test ETH</div></div>
+          </div>
+          <section id="income" class="card income" aria-labelledby="income-title">
+            <div class="card-head">
+              <div><div class="overline" id="inc-period">Latest report</div><h2 id="income-title">How your income is made</h2></div>
+              <button type="button" class="chip-button" id="inc-replay">Replay</button>
+            </div>
+            <div class="inc-controls">
+              <div>
+                <div class="inc-kwh-line"><b id="inc-kwh">0 kWh</b><button type="button" class="text-link" id="inc-reset" hidden>Back to latest report</button></div>
+                <input id="inc-slider" class="inc-slider" type="range" min="300" max="1600" step="5" value="1200" aria-label="Electricity generated in the month, in kWh" />
+                <p class="field-help" id="inc-help">Slide to see what a different month would pay you. Nothing is sent to the blockchain.</p>
+              </div>
+              <div>
+                <div class="inc-row"><span>Electricity receipts</span><b id="inc-rec">Rp0</b></div>
+                <div class="inc-bar" aria-hidden="true"><span class="ib-c" id="inc-bar-c"></span><span class="ib-r" id="inc-bar-r"></span><span class="ib-d" id="inc-bar-d"></span></div>
+                <div class="inc-legend" aria-hidden="true"><span><i class="ib-c"></i><span id="inc-costs-lbl"></span></span><span><i class="ib-r"></i><span id="inc-reserve-lbl"></span></span><span><i class="ib-d"></i>To holders <b id="inc-dist">Rp0</b></span></div>
+                <div class="inc-error" id="inc-err" role="status" hidden></div>
+              </div>
+            </div>
+            <div class="inc-pipe" id="inc-pipe">
+              <div class="inc-packet" id="inc-packet" aria-hidden="true"></div>
+              <div class="inc-node"><div class="inc-ic"><svg class="icon" aria-hidden="true"><use href="#i-sun" /></svg></div><h3>Sunlight</h3><p id="inc-n0">—</p></div>
+              <div class="inc-node"><div class="inc-ic"><svg class="icon" aria-hidden="true"><use href="#i-doc" /></svg></div><h3>Monthly report</h3><p id="inc-n1">—</p></div>
+              <div class="inc-node"><div class="inc-ic"><svg class="icon" aria-hidden="true"><use href="#i-chain" /></svg></div><h3>Smart contract</h3><p id="inc-n2">—</p></div>
+              <div class="inc-node"><div class="inc-ic"><svg class="icon" aria-hidden="true"><use href="#i-wallet" /></svg></div><h3>Your wallet</h3><p id="inc-n3">—</p></div>
+            </div>
+            <div class="inc-block" id="inc-block" hidden>
+              <span id="inc-block-text"></span><span class="inc-pips" id="inc-pips" aria-hidden="true"><i></i><i></i><i></i></span><span id="inc-block-receipt"></span>
+            </div>
+          </section>
+          <div id="claim-ready" class="claim-card" hidden>
+            <div><div class="claim-label">Income ready to claim</div><div class="claim-amount" id="claimable-rp">Rp0</div><div class="claim-eth" id="claimable-eth">0 test ETH</div></div>
+            <button type="button" id="claim-button" class="btn btn-claim">Claim</button>
+          </div>
+          <div id="claim-none" class="claim-empty" hidden>
+            <div><div class="claim-empty-title">Nothing to claim right now</div><p id="claim-none-text"></p></div>
+            <button type="button" class="btn btn-inline btn-compact" disabled>Claim</button>
+          </div>
+          <div class="split">
+            <form id="send-form" class="card send-card" novalidate>
+              <h2>Send Sol Coins</h2>
+              <label class="field-label" for="send-to">Recipient wallet address</label>
+              <input id="send-to" class="input input-mono" placeholder="0x…" spellcheck="false" autocomplete="off" aria-describedby="send-to-error" />
+              <button type="button" id="send-demo" class="text-link" hidden></button>
+              <div id="send-to-error" class="field-error field-error-tight" hidden></div>
+              <label class="field-label" for="send-qty">Number of Sol Coins</label>
+              <div class="input-wrap"><input id="send-qty" class="input input-strong has-max" inputmode="numeric" placeholder="0" autocomplete="off" aria-describedby="send-owned send-qty-error" /><button type="button" id="send-max" class="input-max">Max</button></div>
+              <div class="field-help" id="send-owned">You own 0 Sol Coins</div>
+              <div id="send-qty-error" class="field-error field-error-tight" hidden></div>
+              <button type="submit" id="send-button" class="btn btn-md">Send Sol Coins</button>
+              <p class="field-help field-help-gap">Income you've already earned stays with you. The recipient earns from the next report.</p>
+            </form>
+            <div class="card feed-card">
+              <h2>Your activity</h2>
+              <div id="my-feed"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="operator-page" class="page" hidden>
+      <div class="container container-op">
+        <div id="op-guard" class="empty-card empty-card-guard" hidden>
+          <div class="overline">Operator only</div>
+          <h1>This page is for the solar operator</h1>
+          <p id="op-guard-text">Only the operator wallet can publish monthly reports and withdraw sale proceeds.</p>
+          <button type="button" id="op-guard-button" class="btn btn-inline">Connect wallet</button>
+        </div>
+        <div id="op-loading" hidden><div class="skeleton sk-card"></div></div>
+        <div id="op-content" hidden>
+          <div class="page-head">
+            <div><h1>Operator lab</h1><div class="page-sub">Publish monthly reports and manage sale proceeds</div></div>
+            <span class="operator-badge"><b>OPERATOR</b><span id="op-address"></span></span>
+          </div>
+          <section class="card reporting-card">
+            <div id="operator-reporting-status" aria-live="polite"></div>
+            <div id="reporting-controls" hidden>
+              <button type="button" id="pause-purchases" class="btn btn-md btn-outline">Pause purchases</button>
+              <p class="field-help">Removing a manual pause does not override an overdue report. The operator wallet is fixed; wallet recovery is not included.</p>
+              <div id="simulation-clock" hidden>
+                <p class="field-help">Simulation clock controls</p>
+                <div class="reporting-actions">
+                  <button type="button" id="advance-report-clock" class="btn btn-md btn-outline">Advance to next report opening</button>
+                  <button type="button" id="advance-overdue-clock" class="btn btn-md btn-outline">Advance past reporting deadline</button>
+                </div>
+              </div>
+            </div>
+          </section>
+          <div class="op-top">
+            <form id="report-form" class="card report-card" novalidate>
+              <h2>Monthly report</h2>
+              <label class="field-label" for="report-period">Reporting month</label>
+              <select id="report-period" class="input" aria-describedby="last-published-note"></select>
+              <div class="field-help field-help-small" id="last-published-note"></div>
+              <label class="field-label" for="report-kwh">Electricity generated</label>
+              <div class="input-wrap"><input id="report-kwh" class="input input-strong has-suffix" value="1265" inputmode="numeric" autocomplete="off" /><span class="input-suffix">kWh</span></div>
+              <div class="field-label" id="tariff-label">Electricity tariff</div>
+              <div class="input-static" aria-labelledby="tariff-label"><span>Rp1,500 / kWh</span><small>Fixed in the contract</small></div>
+              <div class="field-pair">
+                <div><label class="field-label" for="report-costs">Operating costs</label><div class="input-wrap"><span class="input-prefix">Rp</span><input id="report-costs" class="input input-strong has-prefix" value="420000" inputmode="numeric" autocomplete="off" /></div></div>
+                <div><label class="field-label" for="report-reserve">Maintenance reserve</label><div class="input-wrap"><span class="input-prefix">Rp</span><input id="report-reserve" class="input input-strong has-prefix" value="250000" inputmode="numeric" autocomplete="off" /></div></div>
+              </div>
+            </form>
+            <div class="breakdown">
+              <h2>Breakdown</h2>
+              <div class="breakdown-rows">
+                <div class="breakdown-row"><span>Electricity receipts<span class="breakdown-note" id="bd-receipts-note"></span></span><span class="mono" id="bd-receipts"></span></div>
+                <div class="breakdown-row"><span>− Operating costs</span><span class="mono" id="bd-costs"></span></div>
+                <div class="breakdown-row"><span>− Maintenance reserve</span><span class="mono" id="bd-reserve"></span></div>
+              </div>
+              <div class="breakdown-bar" aria-hidden="true"><span class="bar-costs" id="bar-costs"></span><span class="bar-reserve" id="bar-reserve"></span><span class="bar-dist" id="bar-dist"></span></div>
+              <div class="legend" aria-hidden="true"><span><i class="bar-costs"></i>Costs</span><span><i class="bar-reserve"></i>Reserve</span><span><i class="bar-dist"></i>To shareholders</span></div>
+              <div id="bd-ok">
+                <div class="dist"><div class="dist-label">Amount to distribute</div><div class="dist-value" id="bd-dist"></div><div class="dist-note"><span id="bd-dist-eth"></span> deposited with the report</div></div>
+                <div class="per-share"><span>Per Sol Coin (÷ 1,000)</span><span><b id="bd-per-share"></b><small id="bd-per-share-eth"></small></span></div>
+              </div>
+              <div id="bd-bad" class="breakdown-error" aria-live="polite" hidden></div>
+              <p id="zero-income-note" class="field-help" hidden></p>
+              <div class="grow"></div>
+              <button type="submit" form="report-form" id="publish-button" class="btn btn-lg btn-sun">Publish report</button>
+            </div>
+          </div>
+          <div class="op-bottom">
+            <div class="card reports-card"><h2>Published reports</h2><div id="reports-table"></div></div>
+            <div class="card proceeds-card">
+              <h2>Sale proceeds</h2>
+              <p class="card-text">What investors paid for Sol Coins, held by the contract until you withdraw it.</p>
+              <div class="proceeds-value" id="proceeds-rp">Rp0</div>
+              <div class="tile-note" id="proceeds-eth">0 test ETH</div>
+              <button type="button" id="withdraw-button" class="btn btn-md">Nothing to withdraw</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="how-page" class="page" hidden>
+      <div class="container container-how">
+        <h1 class="how-title">How Sol Invictus works</h1>
+        <p class="how-lede">From sunlight on a roof in Cikarang to income in your wallet, in five steps.</p>
+        <ol class="flow">
+          <li class="flow-step"><div class="flow-body"><div class="flow-top"><span class="flow-n">1</span><span class="flow-arrow" aria-hidden="true">→</span></div><h3>Sunlight</h3><p>The 10 kWp panels on a Cikarang rooftop turn sunlight into electricity, about 1,200 kWh a month.</p></div></li>
+          <li class="flow-step"><div class="flow-body"><div class="flow-top"><span class="flow-n">2</span><span class="flow-arrow" aria-hidden="true">→</span></div><h3>Electricity sold</h3><p>The building pays for the power it uses. That payment is the project's income.</p></div></li>
+          <li class="flow-step"><div class="flow-body"><div class="flow-top"><span class="flow-n">3</span><span class="flow-arrow" aria-hidden="true">→</span></div><h3>Monthly report</h3><p>The operator reports the kWh, takes out operating costs and a maintenance reserve, and deposits the rest.</p></div></li>
+          <li class="flow-step"><div class="flow-body"><div class="flow-top"><span class="flow-n">4</span><span class="flow-arrow" aria-hidden="true">→</span></div><h3>Split onchain</h3><p>The smart contract divides the deposit equally across all 1,000 Sol Coins, including unsold ones held by the operator. Anyone can check it.</p></div></li>
+          <li class="flow-step"><div class="flow-body"><div class="flow-top"><span class="flow-n">5</span></div><h3>Your wallet</h3><p>Your cut builds up with every report. Claim it to your wallet whenever you like.</p></div></li>
+        </ol>
+        <div class="example-wrap">
+          <div class="example">
+            <div class="overline">Worked example · September 2026</div>
+            <div class="example-rows">
+              <div class="example-row"><span>1,240 kWh × Rp1,500</span><span class="mono">Rp1,860,000</span></div>
+              <div class="example-row"><span>− Operating costs</span><span class="mono">Rp421,000</span></div>
+              <div class="example-row"><span>− Maintenance reserve</span><span class="mono">Rp250,000</span></div>
+              <div class="example-row"><span>= Shared with holders</span><span class="mono highlight">Rp1,189,000</span></div>
+              <div class="example-row"><span>÷ 1,000 Sol Coins</span><span class="mono highlight">Rp1,189 per Sol Coin</span></div>
+            </div>
+          </div>
+          <div class="example-result">
+            <div><div class="claim-label">If you held 25 Sol Coins</div><div class="claim-amount">Rp29,725</div><div class="claim-eth">0.000029725 test ETH, ready to claim</div></div>
+            <a class="btn btn-example" href="#project">Meet the project</a>
+          </div>
+        </div>
+        <p class="how-note" id="how-note">The solar project and its reports are fictional: no panels, meters or utilities are connected. Purchases, reports and claims are real Sepolia testnet transactions. Rp1 of demo value equals 1 gwei of test ETH. That's a display scale, not an exchange rate.</p>
+      </div>
+    </section>
   </main>
-  <footer class="site-width"><div><a class="brand" href="#home"><img src="/favicon.svg" alt="" />SURYA<span>SHARE</span></a><p>Solar, shared.</p></div><div class="footer-links"><a href="#operator" data-page="operator">Demo lab</a><button type="button" id="about-button">About this demo</button><span id="network-badge">Local Ethereum</span><span id="contract-caption" hidden></span></div><p class="footer-disclaimer">Hackathon prototype. Simulated assets. No legal ownership rights.</p></footer>
-  <dialog id="wallet-dialog"><div class="dialog-heading"><h2>Your sunshine starts here.</h2><button type="button" data-close aria-label="Close wallet dialog">×</button></div><p>Pick a funded demo wallet. No setup needed.</p><div class="wallet-options"><button type="button" data-wallet="1"><span class="avatar">A</span><span><strong>Alice</strong><small>Demo investor</small></span><span>→</span></button><button type="button" data-wallet="2"><span class="avatar blue">B</span><span><strong>Budi</strong><small>Demo investor</small></span><span>→</span></button><button type="button" data-wallet="0"><span class="avatar yellow">S</span><span><strong>Solar operator</strong><small>Run the income demo</small></span><span>→</span></button></div><button type="button" id="browser-wallet" class="secondary-button">Connect MetaMask</button><p class="form-footnote">Test wallets only. Never send real funds.</p></dialog>
-  <dialog id="about-dialog"><div class="dialog-heading"><h2>A real blockchain.<br>A simulated solar world.</h2><button type="button" data-close aria-label="Close explanation">×</button></div><p>This hackathon prototype lets you buy, hold, and transfer shares in a fictional solar project, then claim simulated income.</p><p>No panels, meters, utilities, or fiat payments are connected. Tokens do not provide legal ownership.</p><details><summary>The demo numbers</summary><p>1,000 equal shares. Unsold units belong to the operator. Income is allocated to whoever holds the shares when the operator deposits it.</p><p>Rp1,000,000 = 0.001 test ETH is a presentation scale, not an exchange rate. Reports are simulated; blockchain records do not prove physical energy production.</p></details></dialog>
-  <dialog id="receipt-dialog"><div class="dialog-heading"><h2>Your on-chain proof.</h2><button type="button" data-close aria-label="Close transaction receipt">×</button></div><div id="receipt-content"></div></dialog>
-  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <nav class="tab-bar" aria-label="Main">
+    <a href="#home" data-page="home"><svg class="icon" aria-hidden="true"><use href="#i-home" /></svg>Home<span class="tab-dot" aria-hidden="true"></span></a>
+    <a href="#project" data-page="project"><svg class="icon" aria-hidden="true"><use href="#i-sun" /></svg>Project<span class="tab-dot" aria-hidden="true"></span></a>
+    <a href="#portfolio" data-page="portfolio"><svg class="icon" aria-hidden="true"><use href="#i-pie" /></svg>My Sol Coins<span class="tab-dot" aria-hidden="true"></span></a>
+    <a href="#operator" data-page="operator" data-operator-only hidden><svg class="icon" aria-hidden="true"><use href="#i-flask" /></svg>Lab<span class="tab-dot" aria-hidden="true"></span></a>
+    <a href="#how" data-page="how"><svg class="icon" aria-hidden="true"><use href="#i-help" /></svg>Guide<span class="tab-dot" aria-hidden="true"></span></a>
+  </nav>
+
+  <dialog id="wallet-menu" class="wallet-menu" aria-labelledby="menu-role">
+    <div class="wallet-menu-body">
+      <div class="overline" id="menu-role">Investor wallet</div>
+      <div class="menu-address"><span id="menu-address"></span><button type="button" id="menu-copy" class="icon-tile" aria-label="Copy address"><svg class="icon icon-copy" aria-hidden="true"><use href="#i-copy" /></svg></button></div>
+      <div class="menu-balance"><span>Balance</span><span><b id="menu-balance">—</b><small id="menu-balance-sub"></small></span></div>
+      <button type="button" id="menu-switch" class="menu-item menu-item-first"><span id="menu-switch-label">Switch account</span><span class="menu-tag" id="menu-switch-tag">DEMO</span></button>
+      <a id="menu-faucet" class="menu-item menu-item-soft" href="https://cloud.google.com/application/web3/faucet/ethereum/sepolia" target="_blank" rel="noopener noreferrer">Need test ETH? Open a Sepolia faucet<svg class="icon icon-sm" aria-hidden="true"><use href="#i-ext" /></svg></a>
+      <button type="button" id="menu-reset" class="menu-item" hidden>Reset demo<span class="menu-tag">DEMO</span></button>
+      <button type="button" id="menu-disconnect" class="menu-disconnect">Disconnect</button>
+    </div>
+  </dialog>
+
+  <dialog id="wallet-modal" class="modal" aria-label="Wallet connection">
+    <div class="modal-body">
+      <button type="button" class="modal-close" data-close-modal aria-label="Close"><svg class="icon icon-close" aria-hidden="true"><use href="#i-x" /></svg></button>
+      <div id="modal-choose">
+        <h2>Connect a wallet</h2>
+        <p class="modal-text" id="modal-choose-text">Sol Invictus runs on the Sepolia test network. Nothing here uses real money.</p>
+        <div class="wallet-options" id="wallet-options"></div>
+        <div class="faucet-box" id="modal-faucet"><span class="cta-sun cta-sun-small" aria-hidden="true"></span><div><b>Need test ETH?</b> Sepolia ETH is free. <a href="https://cloud.google.com/application/web3/faucet/ethereum/sepolia" target="_blank" rel="noopener noreferrer">Get some from a faucet</a>, then come back.</div></div>
+      </div>
+      <div id="modal-connecting" class="modal-center" hidden>
+        <div class="spinner spinner-big" aria-hidden="true"></div>
+        <h2>Approve in MetaMask</h2>
+        <p>Check your wallet window or app to finish connecting.</p>
+        <button type="button" class="btn btn-cancel" data-close-modal>Cancel</button>
+      </div>
+      <div id="modal-wrong" hidden>
+        <span class="warn-tile" aria-hidden="true">!</span>
+        <h2 class="modal-wrong-title" id="modal-wrong-title">Switch to Sepolia</h2>
+        <p class="modal-text" id="modal-wrong-text"></p>
+        <button type="button" id="switch-network" class="btn btn-lg btn-switch">Switch to Sepolia</button>
+        <button type="button" id="modal-disconnect" class="btn btn-ghost">Disconnect instead</button>
+      </div>
+      <div id="modal-switching" class="modal-center" hidden>
+        <div class="spinner spinner-big" aria-hidden="true"></div>
+        <h2>Switching network</h2>
+        <p id="modal-switching-text">Approve the switch to Sepolia in your wallet.</p>
+      </div>
+    </div>
+  </dialog>
+
+  <div id="tip" class="tip" role="tooltip"></div>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>

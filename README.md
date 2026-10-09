@@ -2,7 +2,7 @@
 
 **Own the sunshine. Share the future.**
 
-SOL INVICTUS is a shared solar ownership app that demonstrates how a solar project can be represented by digital shares on Ethereum. Users buy SURYA tokens, track their holdings, transfer shares, and claim a proportional share of operator-deposited income.
+SOL INVICTUS is a shared solar ownership app that demonstrates how a solar project can be represented by digital shares on Ethereum. Users buy solar shares called Sol Coins in the app (the deployed ERC-20 symbol is SURYA), track their holdings, transfer shares, and claim a proportional share of operator-deposited income.
 
 The app models **Cikarang Rooftop Solar**, a fictional 10 kWp installation in West Java, with 1,000 equal shares. Solar assets and energy reports are simulated; purchases, transfers, and income claims on the public demo are real **Ethereum Sepolia testnet** transactions.
 
@@ -11,7 +11,7 @@ The app models **Cikarang Rooftop Solar**, a fictional 10 kWp installation in We
 ## Features
 
 - **Buy solar shares:** connect MetaMask and purchase available SURYA tokens with Sepolia test ETH.
-- **Track your holdings:** view your share balance, ownership percentage, claimable income, and claimed income in My shares.
+- **Track your holdings:** view your share balance, ownership percentage, claimable income, and claimed income in My Sol Coins.
 - **Claim income:** withdraw the income allocated to your shares directly to your wallet.
 - **Transfer shares:** send tokens to another wallet while keeping previously earned income.
 - **Publish energy reports:** the operator records sample monthly generation, operating costs, and reserves, then deposits the distributable income.
@@ -40,12 +40,12 @@ There are 1,000 whole SURYA shares at 0.0001 test ETH each. Rp1 demo IDR = 1 gwe
 
 You need MetaMask and Sepolia test ETH for purchases and gas. Use an investor account to buy shares; only the deployed contract's operator can publish reports.
 
-1. Open the app and select **Connect MetaMask**. Allow the app to switch to Sepolia when prompted.
-2. Open **Buy shares** and purchase **100 shares** for **0.01 Sepolia ETH**, plus gas. These shares represent 10% of the demo project.
-3. Open **My shares** to view your holdings, claim available income, or transfer tokens.
+1. Open the app and select **Connect wallet**. Allow the app to switch to Sepolia when prompted.
+2. Open **Project** and purchase **100 shares** for **0.01 Sepolia ETH**, plus gas. These shares represent 10% of the demo project.
+3. Open **My Sol Coins** to view your holdings, claim available income, or transfer tokens.
 4. Use **Refresh** to load activity submitted by other wallets. Open a receipt to inspect its transaction on Etherscan.
 
-To demonstrate an income cycle, connect the operator wallet and open **Demo lab**. Use the reporting month shown in the form, with **4,000 kWh**, **Rp800,000 costs**, and **Rp200,000 reserve**. This requires a **0.005 Sepolia ETH** deposit plus gas. A wallet holding 100 shares when the report is published earns **0.0005 Sepolia ETH** from that deposit, displayed as Rp500,000 in demo income. On version 2, a report for a month still in progress must wait until the displayed opening time.
+To demonstrate an income cycle, connect the operator wallet and open **Operator lab**. Use the reporting month shown in the form, with **4,000 kWh**, **Rp800,000 costs**, and **Rp200,000 reserve**. This requires a **0.005 Sepolia ETH** deposit plus gas. A wallet holding 100 shares when the report is published earns **0.0005 Sepolia ETH** from that deposit, displayed as Rp500,000 in demo income. On version 2, a report for a month still in progress must wait until the displayed opening time.
 
 ## Run locally
 
@@ -68,7 +68,7 @@ Open [the local preview](http://127.0.0.1:4173/SOL-INVICTUS/). No local blockcha
 
 For a browser simulation without a wallet or blockchain connection, run `npm run demo` and open [the simulation](http://127.0.0.1:5173). Switch between Alice, Budi, and the operator to try purchases, reports, transfers, and claims. Simulated balances are stored per browser tab and are separate from Sepolia balances.
 
-In the simulation's Demo lab, use **Advance past reporting deadline** to demonstrate blocked purchases, or **Advance to next report opening** to publish another month without waiting. These controls only change the simulation clock. Reloading preserves its clock, reports, and pause state.
+In the simulation's Operator lab, use **Advance past reporting deadline** to demonstrate blocked purchases, or **Advance to next report opening** to publish another month without waiting. These controls only change the simulation clock. Reloading preserves its clock, reports, and pause state.
 
 For local blockchain development, `npm start` launches a disposable Hardhat chain, deploys the contract, and starts the app. Restarting creates a fresh local demo.
 

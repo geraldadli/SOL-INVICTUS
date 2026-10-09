@@ -20,6 +20,6 @@ const deployment = {
 if (!deployment.rpcUrl) throw new Error('Set PUBLIC_RPC_URL to a browser-safe Sepolia RPC endpoint.');
 mkdirSync('public', { recursive: true });
 writeFileSync('public/deployment.json', JSON.stringify(deployment, null, 2));
-console.log(`Deployed SuryaShare at ${deployment.address} on chain ${chainId}`);
+console.log(`Deployed Sol Invictus at ${deployment.address} on chain ${chainId}`);
 console.log(`Deployment transaction: ${receipt.hash}`);
 provider.destroy();

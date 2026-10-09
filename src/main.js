@@ -2,85 +2,61 @@ import { createSimulation, demoAccounts } from './simulation.js';
 import { ensureWalletNetwork } from './wallet-network.js';
 import { getMetaMaskProvider } from './metamask.js';
 import { reportAmounts, utcPeriod } from './reporting.js';
-import { BrowserProvider, Contract, JsonRpcProvider, ZeroAddress, formatEther, isAddress } from 'ethers';
+import { BrowserProvider, Contract, JsonRpcProvider, ZeroAddress, formatEther, getAddress, isAddress } from 'ethers';
 
 const $ = (selector) => document.querySelector(selector);
 const simulationMode = import.meta.env.MODE === 'simulation';
-let simulation;
+const SEPOLIA = 11155111, GWEI = 1000000000n, SHARE_PRICE = 100000n * GWEI, TARIFF_IDR = 1500;
+const fmt = value => Number(value).toLocaleString('en-US');
 const idr = value => `Rp${new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(Number(value))}`;
 const demoIdr = wei => idr(Number(wei) / 1e9);
+const eth = wei => `${formatEther(wei).replace(/\.0$/, '')} ${simulationMode ? 'simulated' : 'test'} ETH`;
+const pct = shares => `${(shares / 10).toFixed(1)}%`;
+const plural = (n, word) => `${fmt(n)} ${word}${n === 1 ? '' : 's'}`;
 const short = address => `${address.slice(0, 6)}…${address.slice(-4)}`;
+const cap = text => text.startsWith('0x') ? text : text[0].toUpperCase() + text.slice(1);
+const same = (a, b) => Boolean(a && b) && a.toLowerCase() === b.toLowerCase();
 const esc = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-let deployment, provider, contract, signer, address, walletName, accounts = [], state, busy = false, toastTimer;
-let walletProvider, connecting = false, safeguards = false;
-const labels = ['Solar operator', 'Alice', 'Budi'];
-const isOperator = () => Boolean(address && deployment && address.toLowerCase() === deployment.operator.toLowerCase());
+const digits = (value, max) => value.replace(/\D/g, '').slice(0, max);
+const whole = value => Number(value) || 0;
 const periodLabel = period => { const s = String(period); return new Date(Number(s.slice(0, 4)), Number(s.slice(4)) - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); };
-const nextPeriod = () => {
-  if (state?.safeguards) return `${Math.floor(state.nextReportingPeriod / 100)}-${String(state.nextReportingPeriod % 100).padStart(2, '0')}`;
-  if (!state?.lastPeriod) { const period = utcPeriod(Date.now() / 1000); return `${Math.floor(period / 100)}-${String(period % 100).padStart(2, '0')}`; }
-  const year = Math.floor(state.lastPeriod / 100), month = state.lastPeriod % 100;
-  return `${month === 12 ? year + 1 : year}-${String(month === 12 ? 1 : month + 1).padStart(2, '0')}`;
+const nextPeriod = period => period % 100 === 12 ? period + 89 : period + 1;
+const currentPeriod = () => utcPeriod(Date.now() / 1000);
+const chainName = id => ({ 1: 'Ethereum Mainnet', [SEPOLIA]: 'Sepolia', 31337: 'the local test chain', 17000: 'Holesky', 560048: 'Hoodi' })[id] ?? `another network (chain ${id})`;
+const isRejection = error => [error, error?.info?.error, error?.error].some(e => e?.code === 4001 || e?.code === 'ACTION_REJECTED');
+let deployment, provider, contract, signer, address, walletName, accounts = [], state, loadError = '';
+let simulation, walletProvider, walletChainId, usingMetaMask = false, accountTarget, connectAttempt = 0, scanFrom, toastId = 0;
+let safeguards = false;
+const ui = { qty: '10', filter: 'All', busy: null, busyStage: null, modal: null, toasts: [] };
+const logCache = new Map(), blockTimes = new Map();
+const labels = ['Solar operator', 'Alice', 'Budi'];
+const onSepolia = () => deployment?.chainId === SEPOLIA;
+const hasDemoWallets = () => accounts.length > 0;
+const networkLabel = () => onSepolia() ? 'Sepolia' : 'the local chain';
+const switchLabel = () => `Switch to ${networkLabel()}`;
+const isOperator = () => Boolean(address && deployment && same(address, deployment.operator));
+const wrongNetwork = () => Boolean(address && usingMetaMask && walletChainId !== deployment.chainId);
+const txUrl = hash => onSepolia() ? `https://sepolia.etherscan.io/tx/${hash}` : '';
+const balanceText = () => simulation ? idr(state.cash) : eth(state.ethBalance);
+const reverts = {
+  'Use an investor wallet': "The operator wallet can't buy Sol Coins. Switch to an investor account.",
+  'Invalid share quantity': 'Fewer Sol Coins are left than you tried to buy. Pick a smaller number and try again.',
+  'Incorrect payment': "The payment didn't match the Sol Coin price. Reload the page and try again.",
+  'Period already reported or out of order': 'This month has already been reported, or it comes before the last report. Pick a later month and try again.',
+  'No distributable income': "Costs and reserve are higher than this month's receipts, so there's nothing to share.",
+  'Incorrect revenue deposit': "The deposit didn't match the report. Reload the page and try again.",
+  'No income to claim': 'There is no income to claim right now.',
+  'Payout failed': "The payout couldn't be sent to your wallet. Your income is still safe in the contract. Try again in a minute.",
+  'No proceeds': 'There are no sale proceeds to withdraw.',
+  'Withdrawal failed': "The withdrawal didn't go through. The proceeds are still in the contract. Try again in a minute.",
+  'Sale inventory reserved': "The operator's unsold Sol Coins are reserved for buyers and can't be sent.",
+  'Operator only': 'Only the operator wallet can do this.',
+  'Purchases paused or reporting overdue': 'Purchases are paused. Existing claims and transfers remain available.',
+  'Report the next required month': 'Report the next required month without skipping any months.',
+  'Reporting month has not ended': 'This reporting month has not ended yet. Check the reporting opening time.',
 };
 
-function toast(message, error = false) {
-  clearTimeout(toastTimer);
-  $('#toast').textContent = message;
-  $('#toast').classList.toggle('error', error);
-  $('#toast').hidden = false;
-  toastTimer = setTimeout(() => { $('#toast').hidden = true; }, error ? 10000 : 6000);
-}
-function errorMessage(error) {
-  if (error.code === 4001 || error.code === 'ACTION_REJECTED') return 'Transaction cancelled in your wallet.';
-  if (error.code === 'INSUFFICIENT_FUNDS') return 'This wallet needs test ETH for the transaction and network fee.';
-  return error.reason || error.shortMessage || error.message || 'The transaction could not be completed.';
-}
-function showPage() {
-  if (location.hash === '#main-content') return;
-  const page = ['home', 'project', 'how', 'portfolio', 'operator'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'home';
-  document.querySelectorAll('.page').forEach(section => { section.hidden = section.id !== `${page}-page`; });
-  document.querySelectorAll('[data-page]').forEach(link => {
-    link.classList.toggle('active', link.dataset.page === page);
-    if (link.dataset.page === page) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
-  });
-  window.scrollTo({ top: 0, behavior: 'instant' });
-}
-function integer(value, min, max, label) {
-  if (!/^\d+$/.test(String(value))) throw new Error(`${label} must be a whole number.`);
-  const n = Number(value);
-  if (!Number.isSafeInteger(n) || n < min || n > max) throw new Error(`${label} must be between ${min} and ${max}.`);
-  return n;
-}
-function updatePurchase() {
-  const quantity = Number($('#share-count').value);
-  const valid = Number.isInteger(quantity) && quantity > 0 && quantity <= (state?.available ?? 1000);
-  $('#purchase-ownership').textContent = valid ? `${(quantity / 10).toFixed(1)}%` : '—';
-  $('#purchase-total').textContent = valid ? idr(quantity * 100000) : '—';
-  $('#buy-button').textContent = busy ? 'Confirming transaction…' : (!simulation && !contract) || !state ? 'Blockchain unavailable' : !address ? 'Connect wallet →' : isOperator() ? 'Switch to an investor wallet' : state.available === 0 ? 'All shares purchased' : 'Buy demo shares →';
-  $('#buy-button').disabled = busy || (!simulation && !contract) || !state || !valid || isOperator();
-  $('#purchase-footnote').textContent = simulation ? `Demo balance: ${idr(state?.cash ?? 0)} · No real money` : address ? `${walletName} · Test ETH + network fee` : 'Test ETH only. No real money.';
-  if (state?.safeguards && (!state.purchasesAllowed || state.statusUnavailable)) {
-    $('#buy-button').disabled = true;
-    $('#buy-button').textContent = state.statusUnavailable ? 'Reporting status unavailable' : state.purchasesPaused ? 'Purchases paused by operator' : 'Purchases paused: report overdue';
-    $('#purchase-footnote').textContent = 'Existing shares can still be transferred and deposited income can still be claimed.';
-  }
-}
 const utcDate = timestamp => `${new Date(timestamp * 1000).toLocaleString('en-GB', { timeZone: 'UTC' })} UTC`;
-function reportingHTML() {
-  if (!state) return '<p>Loading reporting status…</p>';
-  if (!state.safeguards) return '<p>This contract does not support reporting deadlines or purchase pausing. These protections require the new contract deployment.</p>';
-  const status = state.statusUnavailable ? 'Reporting status unavailable — purchases disabled in this app' : state.purchasesPaused && state.overdue ? 'Operator pause and overdue report' : state.purchasesPaused ? 'Purchases paused by operator' : state.overdue ? 'Report overdue — purchases blocked' : 'Purchases open';
-  return `<h3>${status}</h3><p>Last report: ${state.lastPeriod ? periodLabel(state.lastPeriod) : 'None yet'}. Next required: <strong>${periodLabel(state.nextReportingPeriod)}</strong>.</p><p>Reporting opens: ${utcDate(state.reportingOpensAt)}<br>Due by: ${utcDate(state.reportDueAt)}</p><p>Claims and transfers remain available. Reports are operator-supplied sample data.</p>`;
-}
-function renderReporting() {
-  if ($('#reporting-status')) $('#reporting-status').innerHTML = reportingHTML();
-  if (!$('#operator-reporting')) return;
-  $('#operator-reporting').innerHTML = `${reportingHTML()}${deployment?.operator ? `<p>Operator: <span class="receipt-value">${esc(deployment.operator)}</span></p>` : ''}${state?.safeguards ? `<button type="button" class="secondary-button" data-write id="pause-purchases" ${!isOperator() || busy || state.statusUnavailable ? 'disabled' : ''}>${state.purchasesPaused ? 'Remove manual purchase pause' : 'Pause purchases'}</button><p>Removing a manual pause cannot reopen purchases while reporting is overdue. Wallet recovery is not available.</p>${simulation ? '<p>Simulation clock controls affect this browser demo only.</p><button type="button" class="text-button" id="advance-report-clock">Advance to next report opening →</button><button type="button" class="text-button" id="advance-overdue-clock">Advance past reporting deadline →</button>' : ''}` : ''}`;
-  if ($('#pause-purchases')) $('#pause-purchases').onclick = () => transact(c => c.setPurchasesPaused(!state.purchasesPaused), state.purchasesPaused ? 'Manual pause removed. Overdue reporting still blocks purchases.' : 'Purchases paused. Claims and transfers remain available.');
-  const advance = async target => { try { if (target > simulation.snapshot(address).timestamp) simulation.advanceTo(target); await refresh(); } catch (error) { toast(errorMessage(error), true); } };
-  if ($('#advance-report-clock')) $('#advance-report-clock').onclick = () => advance(state.reportingOpensAt);
-  if ($('#advance-overdue-clock')) $('#advance-overdue-clock').onclick = () => advance(state.reportDueAt + 1);
-}
 async function readReportingStatus() {
   if (!safeguards) return { safeguards: false };
   const block = await provider.getBlock('latest');
@@ -91,289 +67,869 @@ async function readReportingStatus() {
   return { safeguards: true, lastPeriod: Number(lastPeriod), nextReportingPeriod: Number(next), reportingOpensAt: Number(opens), reportDueAt: Number(due),
     purchasesPaused: paused, overdue, purchasesAllowed: allowed, timestamp: block.timestamp, statusUnavailable: false };
 }
-function activityHTML(logs) {
-  if (!logs.length) return '<div class="empty-state">The first share starts the story. Purchase demo shares to begin.</div>';
-  return logs.slice(-8).reverse().map(log => {
-    const a = log.args;
-    const title = log.name === 'SharesPurchased' ? `${nameFor(a.buyer)} purchased ${a.shares} shares`
-      : log.name === 'ReportPublished' ? `${periodLabel(a.period)} report published`
-      : log.name === 'PurchasesPauseChanged' ? (a.paused ? 'Operator paused purchases' : 'Operator removed manual pause')
-      : log.name === 'RevenueClaimed' ? `${nameFor(a.holder)} claimed income`
-      : log.name === 'Transfer' ? `${nameFor(a.from)} transferred ${a.value} shares to ${nameFor(a.to)}`
-      : 'Operator withdrew purchase proceeds';
-    const value = log.name === 'PurchasesPauseChanged' ? 'Claims and transfers remain available' : log.name === 'SharesPurchased' ? demoIdr(a.paid) : log.name === 'ReportPublished' ? demoIdr(a.deposited) : log.name === 'Transfer' ? `${a.value} SURYA` : demoIdr(a.amount);
-    return `<div class="activity-row"><span class="activity-icon" aria-hidden="true">${log.name === 'ReportPublished' ? '☀' : '↗'}</span><div><strong>${esc(title)}</strong><p>${simulation ? 'Demo step' : 'Block'} ${log.blockNumber} · ${esc(value)}</p></div><button class="text-button" type="button" data-receipt="${log.transactionHash}">Receipt ↗</button></div>`;
-  }).join('');
+function renderReporting() {
+  const status = !state ? 'Loading reporting status…' : !state.safeguards ? 'Reporting protections unavailable on this contract'
+    : state.statusUnavailable ? 'Reporting status unavailable — purchases disabled'
+    : state.purchasesPaused && state.overdue ? 'Operator pause and overdue report'
+    : state.purchasesPaused ? 'Purchases paused by operator' : state.overdue ? 'Report overdue — purchases blocked' : 'Reporting up to date';
+  const detail = state?.safeguards ? `<p>Last report: ${state.lastPeriod ? periodLabel(state.lastPeriod) : 'None yet'}. Next required: <strong>${periodLabel(state.nextReportingPeriod)}</strong>.</p><p>Reporting opens: ${utcDate(state.reportingOpensAt)}<br>Due by: ${utcDate(state.reportDueAt)}</p><p>Claims and transfers remain available. Reports are operator-supplied sample data.</p>` : '<p>Monthly deadlines and purchase pausing require a version 2 contract.</p>';
+  for (const id of ['reporting-status', 'operator-reporting-status']) $(`#${id}`).innerHTML = `<h2>${status}</h2>${detail}`;
+  $('#reporting-controls').hidden = !state?.safeguards;
+  $('#simulation-clock').hidden = !simulation;
+  setActionButton($('#pause-purchases'), 'pause', wrongNetwork() ? switchLabel() : state?.purchasesPaused ? 'Remove manual purchase pause' : 'Pause purchases', Boolean(state?.safeguards && isOperator() && !state.statusUnavailable));
+}
+
+function errorMessage(error) {
+  if (isRejection(error)) return 'You cancelled the request in your wallet. Nothing was sent.';
+  if (error.code === 'INSUFFICIENT_FUNDS' || /insufficient funds/i.test(error.message ?? '')) {
+    return `Your wallet doesn't have enough test ETH to cover this and the network fee.${onSepolia() ? ' Get more from a Sepolia faucet and try again.' : ''}`;
+  }
+  return reverts[error.reason] || error.reason || error.shortMessage || error.message || 'The transaction could not be completed.';
 }
 function nameFor(account) {
-  const index = accounts.findIndex(a => a.toLowerCase() === account.toLowerCase());
-  return labels[index] || short(account);
+  if (same(account, address)) return 'you';
+  const index = accounts.findIndex(a => same(a, account));
+  if (index >= 0) return labels[index];
+  return same(account, deployment?.operator) ? 'the operator' : short(account);
+}
+
+// Toasts
+const toastMeta = { wallet: ['Waiting for your wallet', ''], confirmed: ['Confirmed', 'ok'], info: ['Done', 'ok'], rejected: ['Rejected in wallet', ''], failed: ['Transaction failed', 'bad'], error: ['Something went wrong', 'bad'] };
+function pushToast(toast) {
+  const id = ++toastId;
+  ui.toasts = [...ui.toasts.slice(-2), { ...toast, id }];
+  renderToasts();
+  return id;
+}
+function patchToast(id, patch) { ui.toasts = ui.toasts.map(t => t.id === id ? { ...t, ...patch } : t); renderToasts(); }
+function dismissToast(id) { ui.toasts = ui.toasts.filter(t => t.id !== id); renderToasts(); }
+function dismissLater(id, ms) { setTimeout(() => dismissToast(id), ms); }
+function info(title, body) { dismissLater(pushToast({ status: 'info', title, body }), 4000); }
+function notify(error, title = 'Something went wrong') { dismissLater(pushToast({ status: 'error', title, body: errorMessage(error) }), 10000); }
+function toastIcon(status) {
+  if (status === 'wallet' || status === 'pending') return '<span class="spinner"></span>';
+  if (status === 'confirmed' || status === 'info') return '<span class="status-icon status-ok"><svg class="icon"><use href="#i-check" /></svg></span>';
+  if (status === 'rejected') return '<span class="status-icon status-rejected"><svg class="icon"><use href="#i-x" /></svg></span>';
+  return '<span class="status-icon status-bad">!</span>';
+}
+function renderToasts() {
+  $('#toasts').innerHTML = ui.toasts.map(t => {
+    const [label, tone] = t.status === 'pending' ? [`Pending on ${networkLabel()}`, ''] : toastMeta[t.status];
+    const url = t.hash && t.status !== 'failed' ? txUrl(t.hash) : '';
+    return `<div class="toast"><div class="toast-status" aria-hidden="true">${toastIcon(t.status)}</div><div class="toast-text"><div class="toast-label ${tone}">${label}</div><div class="toast-title">${esc(t.title)}</div>${t.body ? `<div class="toast-body">${esc(t.body)}</div>` : ''}${url ? `<a class="toast-link" href="${url}" target="_blank" rel="noopener noreferrer">View on Etherscan<svg class="icon icon-xs" aria-hidden="true"><use href="#i-ext" /></svg></a>` : ''}</div><button type="button" class="toast-close" data-dismiss="${t.id}" aria-label="Dismiss"><svg class="icon" aria-hidden="true"><use href="#i-x" /></svg></button></div>`;
+  }).join('');
+}
+
+// Chain data as display items
+const tones = { Bought: ['BUY', 'Purchase'], Report: ['kWh', 'Monthly report'], Claimed: ['Rp', 'Claim'], Sent: ['OUT', 'Transfer'], Received: ['IN', 'Transfer'], Pause: ['II', 'Purchase controls'] };
+const reports = () => (state?.logs ?? []).filter(log => log.name === 'ReportPublished').map(log => ({
+  period: Number(log.args.period), kwh: Number(log.args.kwh), costs: Number(log.args.costsIdr), reserve: Number(log.args.reserveIdr),
+  deposited: BigInt(log.args.deposited), hash: log.transactionHash, block: log.blockNumber,
+}));
+function activity() {
+  return (state?.logs ?? []).flatMap(log => {
+    const a = log.args, item = { hash: log.transactionHash, block: log.blockNumber };
+    if (log.name === 'SharesPurchased') return { ...item, kind: 'Bought', mine: same(a.buyer, address), title: `${cap(nameFor(a.buyer))} bought ${plural(Number(a.shares), 'Sol Coin')}`, wei: BigInt(a.paid) };
+    if (log.name === 'ReportPublished') return { ...item, kind: 'Report', mine: false, title: `${periodLabel(a.period)} report · ${fmt(a.kwh)} kWh`, wei: BigInt(a.deposited) };
+    if (log.name === 'PurchasesPauseChanged') return { ...item, kind: 'Pause', mine: false, title: a.paused ? 'Operator paused purchases' : 'Operator removed manual pause' };
+    if (log.name === 'RevenueClaimed') return { ...item, kind: 'Claimed', mine: same(a.holder, address), title: `${cap(nameFor(a.holder))} claimed income`, wei: BigInt(a.amount) };
+    if (log.name === 'Transfer' && same(a.from, address)) return { ...item, kind: 'Sent', mine: true, title: `You sent ${plural(Number(a.value), 'Sol Coin')} to ${nameFor(a.to)}`, shares: Number(a.value) };
+    if (log.name === 'Transfer' && same(a.to, address)) return { ...item, kind: 'Received', mine: true, title: `${cap(nameFor(a.from))} sent you ${plural(Number(a.value), 'Sol Coin')}`, shares: Number(a.value) };
+    return [];
+  }).reverse();
+}
+function when(item) {
+  if (simulation) return `Demo step ${item.block}`;
+  const time = blockTimes.get(item.block);
+  if (!time) return `Block ${fmt(item.block)}`;
+  const seconds = Date.now() / 1000 - time, hours = Math.floor(seconds / 3600), days = Math.floor(seconds / 86400);
+  if (seconds < 60) return 'Just now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
+  if (days < 1) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  if (days === 1) return 'Yesterday';
+  if (days < 30) return `${days} days ago`;
+  return new Date(time * 1000).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+function receipt(item, label) {
+  const url = txUrl(item.hash);
+  if (!url) return `<span class="receipt-tag">${simulation ? 'Simulated' : 'Local chain'}</span>`;
+  return `<a class="receipt-link" href="${url}" target="_blank" rel="noopener noreferrer" aria-label="Receipt for ${esc(label)} on Etherscan">Receipt<svg class="icon icon-xs" aria-hidden="true"><use href="#i-ext" /></svg></a>`;
+}
+function feedRow(item, mine = false) {
+  const [badge, kindName] = tones[item.kind];
+  const amount = item.kind === 'Pause' ? 'Claims remain available' : item.wei === undefined ? plural(item.shares, 'Sol Coin') : demoIdr(item.wei);
+  const head = `<span class="feed-badge kind-${item.kind}" aria-hidden="true">${badge}</span><div class="feed-text"><div class="feed-title">${esc(item.title)}</div><div class="feed-meta">${mine ? amount : kindName} · ${when(item)}</div></div>`;
+  if (mine) return `<div class="feed-row">${head}${receipt(item, item.title)}</div>`;
+  return `<div class="feed-row">${head}<div class="feed-end"><div class="feed-amount"><strong>${amount}</strong>${item.wei === undefined ? '' : `<span>${eth(item.wei)}</span>`}</div>${receipt(item, item.title)}</div></div>`;
+}
+
+// Rendering
+function setActionButton(button, key, idle, enabled) {
+  const active = ui.busy === key;
+  const label = active ? (ui.busyStage === 'wallet' ? 'Confirm in your wallet…' : `Processing on ${networkLabel()}…`) : idle;
+  const html = active ? `<span class="spinner" aria-hidden="true"></span>${esc(label)}` : esc(label);
+  if (button.dataset.html !== html) { button.innerHTML = html; button.dataset.html = html; }
+  button.disabled = !enabled || Boolean(ui.busy);
+  button.classList.toggle('is-busy', active);
+}
+function showPage() {
+  if (location.hash === '#main-content') return;
+  const page = ['home', 'project', 'portfolio', 'how', 'operator'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'home';
+  document.querySelectorAll('.page').forEach(section => { section.hidden = section.id !== `${page}-page`; });
+  document.querySelectorAll('[data-page]').forEach(link => {
+    link.classList.toggle('active', link.dataset.page === page);
+    if (link.dataset.page === page) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
+  });
+  closeMenu();
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+function render() {
+  renderHeader(); renderProject(); renderPortfolio(); renderOperator(); renderReporting(); renderMenu(); renderModal();
+  $('#home-sold').textContent = state ? fmt(1000 - state.available) : '—';
+  $('#load-error').textContent = loadError;
+  $('#load-error').hidden = !loadError;
+}
+function renderHeader() {
+  const operator = isOperator(), wrong = wrongNetwork();
+  document.querySelectorAll('[data-operator-only]').forEach(link => { link.hidden = !operator; });
+  $('#wrong-network').hidden = !wrong;
+  $('#network-pill').hidden = wrong;
+  $('#wallet-chip').hidden = !address;
+  $('#connect-button').hidden = Boolean(address);
+  $('#operator-tag').hidden = !operator;
+  $('#operator-dot').hidden = !operator;
+  if (!address) return;
+  $('#wallet-address-wide').textContent = short(address);
+  $('#wallet-address-narrow').textContent = `${address.slice(0, 4)}…${address.slice(-4)}`;
+}
+function renderProject() {
+  $('#project-loading').hidden = Boolean(state || loadError);
+  $('#project-content').hidden = !state;
+  if (!state) return;
+  const left = state.available, sold = 1000 - left, last = reports().at(-1);
+  $('#status-chip').textContent = left ? `Selling · ${fmt(left)} Sol Coins left` : 'Fully funded';
+  if (state.safeguards && (!state.purchasesAllowed || state.statusUnavailable)) $('#status-chip').textContent = 'Purchases paused';
+  $('#last-kwh').textContent = last ? `${fmt(last.kwh)} kWh` : 'None yet';
+  $('#last-label').textContent = last ? periodLabel(last.period) : 'First report pending';
+  $('#sold-pct').textContent = pct(sold);
+  $('#sold-count').textContent = fmt(sold);
+  $('#left-count').textContent = fmt(left);
+  document.querySelectorAll('[data-filter]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.filter === ui.filter)));
+  const kind = { Purchases: 'Bought', Reports: 'Report', Claims: 'Claimed' }[ui.filter];
+  const feed = activity().filter(item => ['Bought', 'Report', 'Claimed', 'Pause'].includes(item.kind) && (!kind || item.kind === kind)).slice(0, 20);
+  $('#project-feed').innerHTML = feed.length ? `<div class="feed">${feed.map(item => feedRow(item)).join('')}</div>`
+    : `<div class="feed-empty"><div class="feed-empty-title">${ui.filter === 'All' ? 'No activity yet' : `No ${ui.filter.toLowerCase()} yet`}</div><p>Purchases, monthly reports and claims show up here${onSepolia() ? ', each with a receipt you can check on Etherscan' : ''}.</p></div>`;
+  renderBuy();
+}
+function renderBuy() {
+  if (!state) return;
+  const left = state.available, last = reports().at(-1), q = whole(ui.qty), price = BigInt(q) * SHARE_PRICE;
+  const connected = Boolean(address), operator = isOperator(), wrong = wrongNetwork();
+  let error = '';
+  if (ui.qty !== '' && q < 1) error = 'Choose at least 1 Sol Coin.';
+  else if (q > left) error = left ? `Only ${fmt(left)} Sol Coins are left.` : 'All 1,000 Sol Coins are sold.';
+  else if (connected && !operator && !wrong && price > state.ethBalance) error = `That's more than your ${simulation ? 'demo balance' : 'wallet'} holds (${balanceText()}).`;
+  document.querySelectorAll('[data-preset]').forEach(button => button.setAttribute('aria-pressed', String(Number(button.dataset.preset) === q)));
+  $('#qty-stepper').classList.toggle('invalid', Boolean(error));
+  $('#qty').setAttribute('aria-invalid', String(Boolean(error)));
+  $('#qty-error').textContent = error;
+  $('#qty-error').hidden = !error;
+  $('#own-pct').textContent = pct(q);
+  $('#total-rp').textContent = idr(q * 100000);
+  $('#total-eth').textContent = eth(price);
+  $('#payout-estimate').hidden = !last;
+  if (last) {
+    const payout = BigInt(q) * last.deposited / 1000n;
+    $('#estimate-title').textContent = `${periodLabel(last.period).split(' ')[0]}'s payout for ${plural(q, 'Sol Coin')}`;
+    $('#estimate-rp').textContent = demoIdr(payout);
+    $('#estimate-eth').textContent = eth(payout);
+  }
+  let label, enabled = true, faucet = false;
+  let note = simulation ? 'Paid from your demo balance. No real money.' : 'Your wallet shows the network fee before you confirm.';
+  if (!left) { label = 'Sold out'; enabled = false; }
+  else if (!connected) { label = 'Connect wallet to buy'; note = onSepolia() ? "You'll need a wallet with Sepolia test ETH." : 'Pick a demo wallet to start.'; faucet = onSepolia(); }
+  else if (wrong) label = switchLabel();
+  else if (operator) { label = "Operator wallet can't buy"; enabled = false; note = `Switch to an investor ${usingMetaMask ? 'account' : 'wallet'} from the wallet menu to buy Sol Coins.`; }
+  else { label = q > 0 ? `Buy ${plural(q, 'Sol Coin')}` : 'Buy Sol Coins'; enabled = q >= 1 && !error; faucet = onSepolia() && price > state.ethBalance; }
+  if (state.safeguards && (!state.purchasesAllowed || state.statusUnavailable)) {
+    label = state.statusUnavailable ? 'Reporting status unavailable' : state.purchasesPaused ? 'Purchases paused by operator' : 'Purchases paused: report overdue';
+    enabled = false; faucet = false;
+    note = 'Existing shares can still be transferred and deposited income can still be claimed.';
+  }
+  setActionButton($('#buy-button'), 'buy', label, enabled);
+  $('#buy-note').textContent = note;
+  $('#buy-faucet').hidden = !faucet;
+  renderLedger();
+}
+function sendCheck() {
+  const to = $('#send-to').value.trim(), raw = $('#send-qty').value, q = whole(raw), owned = state?.balance ?? 0;
+  let toErr = '', qtyErr = '';
+  if (to && !(/^0x[0-9a-fA-F]{40}$/.test(to) && isAddress(to))) toErr = "That doesn't look like a wallet address. It should start with 0x and have 42 characters.";
+  else if (same(to, ZeroAddress)) toErr = "Sol Coins can't be sent to the zero address.";
+  else if (same(to, address)) toErr = "That's your own address.";
+  else if (same(to, deployment?.operator)) toErr = "Sol Coins can't be sent to the operator wallet.";
+  else if (to && simulation && !demoAccounts.slice(1).some(a => same(a, to))) toErr = 'In the simulation, send Sol Coins to the other demo investor.';
+  if (raw && q < 1) qtyErr = 'Enter at least 1 Sol Coin.';
+  else if (q > owned) qtyErr = `You only have ${plural(owned, 'Sol Coin')}.`;
+  return { to, q, toErr, qtyErr, ok: Boolean(to) && !toErr && q >= 1 && !qtyErr };
 }
 function renderPortfolio() {
-  const balance = state?.balance ?? 0, claimable = state?.claimable ?? 0n, claimed = state?.claimed ?? 0n;
-  const percent = balance / 10;
-  const myLogs = (state?.logs ?? []).filter(log => Object.values(log.args).some(value => typeof value === 'string' && value.toLowerCase() === address?.toLowerCase()));
-  $('#portfolio-page').innerHTML = `<div class="page-heading"><div><span class="eyebrow">MY SURYASHARE</span><h1>Your sunshine.<br>All in one place.</h1><p>${address ? `${esc(walletName)} · ${short(address)}` : 'Connect a wallet. Start your solar story.'}</p></div><button class="secondary-button" type="button" data-choose-wallet>${address ? 'Switch wallet ↗' : 'Connect wallet ↗'}</button></div>
-    <div class="portfolio-stats"><div class="stat-card"><span>Your shares</span><strong>${balance} <small>SURYA</small></strong><small>${percent.toFixed(1)}% of the demo project</small></div><div class="stat-card"><span>Demo share value</span><strong>${idr(balance * 100000)}</strong><small>At the original issue price</small></div><div class="stat-card highlight"><span>Demo income claimed</span><strong>${demoIdr(claimed)}</strong><small>${simulation ? 'Added to your demo balance' : `${formatEther(claimed)} test ETH`}</small></div></div>
-    <div class="portfolio-layout"><article class="card"><h2>Your piece of the rooftop.</h2><div class="ownership-row"><div class="ownership-ring"><svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="50" fill="none" stroke="#eee9d8" stroke-width="11"/><circle cx="60" cy="60" r="50" fill="none" stroke="#ffd400" stroke-width="11" pathLength="100" stroke-dasharray="${percent} 100"/></svg><strong>${percent.toFixed(1)}%</strong></div><div><h3>Cikarang Solar</h3><p>${balance} of 1,000 demo shares.</p><a class="text-button" href="#project">Get more shares ↗</a></div></div></article>
-    <article class="card payout-card"><h2>Your slice is ready.</h2><div class="payout-amount">${demoIdr(claimable)}</div><p>${simulation ? 'Simulated income. Your shares stay yours.' : `${formatEther(claimable)} test ETH to claim.`}</p><button type="button" class="primary-button" data-write id="claim-button" ${!address || claimable === 0n || busy ? 'disabled' : ''}>Claim demo income →</button></article></div>
-    <details class="card activity-card transfer-details"><summary>Send shares to another wallet <span>↗</span></summary><p>Transfer tokens. No payment or sale is included.</p><form id="transfer-form" class="transfer-form"><div class="field"><label for="recipient">Wallet address</label><input id="recipient" placeholder="0x…" required autocomplete="off" /></div><div class="field share-field"><label for="transfer-quantity">Shares</label><input id="transfer-quantity" type="number" min="1" max="${balance}" step="1" value="10" required /></div><button type="submit" data-write class="secondary-button" ${!address || !balance || busy || isOperator() ? 'disabled' : ''}>Transfer shares →</button></form>${accounts[2] ? `<button type="button" id="use-demo-recipient" class="text-button">Use ${address?.toLowerCase() === accounts[2].toLowerCase() ? 'Alice' : 'Budi'}’s demo wallet →</button>` : ''}</details>
-    <article class="card activity-card"><h2>${simulation ? 'Your demo activity' : 'Your on-chain activity'}</h2>${myLogs.length ? activityHTML(myLogs) : '<div class="empty-state">Buy your first shares to get started.</div>'}</article>`;
-  $('#claim-button').onclick = () => transact(c => c.claimRevenue(), 'Demo income claimed. Your balance has been updated.');
-  if ($('#use-demo-recipient')) $('#use-demo-recipient').onclick = () => { $('#recipient').value = address?.toLowerCase() === accounts[2].toLowerCase() ? accounts[1] : accounts[2]; };
-  $('#transfer-form').onsubmit = event => {
-    event.preventDefault();
-    try {
-      const recipient = $('#recipient').value.trim();
-      if (!isAddress(recipient) || recipient === ZeroAddress || recipient.toLowerCase() === address?.toLowerCase()) throw new Error('Enter a different, valid Ethereum wallet address.');
-      const quantity = integer($('#transfer-quantity').value, 1, balance, 'Shares');
-      transact(c => c.transfer(recipient, quantity), `${quantity} demo shares transferred. Past income stays with its original holder.`);
-    } catch (error) { toast(errorMessage(error), true); }
-  };
+  const operator = isOperator(), mine = state && address ? activity().filter(item => item.mine) : [];
+  const empty = Boolean(state && address && !operator && !state.balance && !state.claimable && !state.claimed && !mine.length);
+  const full = Boolean(state && address && !operator && !empty);
+  $('#portfolio-address').textContent = address ? short(address) : 'Not connected';
+  $('#portfolio-loading').hidden = !(address && !state && !loadError);
+  $('#pf-no-wallet').hidden = Boolean(address);
+  $('#pf-operator').hidden = !operator;
+  $('#pf-switch').textContent = usingMetaMask ? 'Switch account in MetaMask' : 'Use investor wallet';
+  $('#pf-empty').hidden = !empty;
+  $('#pf-full').hidden = !full;
+  if (!full) return;
+  const wrong = wrongNetwork(), canClaim = state.claimable > 0n;
+  $('#my-shares').textContent = fmt(state.balance);
+  $('#my-pct').textContent = pct(state.balance);
+  $('#my-value-rp').textContent = idr(state.balance * 100000);
+  $('#my-value-eth').textContent = eth(BigInt(state.balance) * SHARE_PRICE);
+  $('#my-claimed-rp').textContent = demoIdr(state.claimed);
+  $('#my-claimed-eth').textContent = eth(state.claimed);
+  $('#claim-ready').hidden = !canClaim;
+  $('#claim-none').hidden = canClaim;
+  $('#claimable-rp').textContent = demoIdr(state.claimable);
+  $('#claimable-eth').textContent = eth(state.claimable);
+  setActionButton($('#claim-button'), 'claim', wrong ? switchLabel() : `Claim ${demoIdr(state.claimable)}`, canClaim);
+  const next = state.lastPeriod ? `${periodLabel(nextPeriod(state.lastPeriod))} report` : 'first monthly report';
+  $('#claim-none-text').textContent = `Your next payout arrives when the operator publishes the ${next}. We'll show it here as soon as it lands.`;
+  renderIncome();
+  const check = sendCheck();
+  $('#send-owned').textContent = `You own ${plural(state.balance, 'Sol Coin')}`;
+  for (const [field, message] of [['to', check.toErr], ['qty', check.qtyErr]]) {
+    $(`#send-${field}`).classList.toggle('invalid', Boolean(message));
+    $(`#send-${field}`).setAttribute('aria-invalid', String(Boolean(message)));
+    $(`#send-${field}-error`).textContent = message;
+    $(`#send-${field}-error`).hidden = !message;
+  }
+  setActionButton($('#send-button'), 'send', wrong ? switchLabel() : 'Send Sol Coins', wrong || (check.ok && state.balance > 0));
+  const other = hasDemoWallets() ? accounts.find((account, i) => i > 0 && !same(account, address)) : null;
+  $('#send-demo').hidden = !other;
+  if (other) { $('#send-demo').textContent = `Use ${labels[accounts.indexOf(other)]}'s demo address`; $('#send-demo').dataset.address = other; }
+  $('#my-feed').innerHTML = mine.length ? `<div class="feed">${mine.slice(0, 20).map(item => feedRow(item, true)).join('')}</div>`
+    : '<p class="feed-note">Nothing here yet. Your purchases, claims and transfers will appear with receipts.</p>';
+}
+function breakdown() {
+  const kwh = whole($('#report-kwh').value), costs = whole($('#report-costs').value), reserve = whole($('#report-reserve').value);
+  const { gross: receipts, net: dist, loss } = reportAmounts(kwh, costs, reserve);
+  const period = Number($('#report-period').value);
+  let bad = '';
+  if (['#report-kwh', '#report-costs', '#report-reserve'].some(id => !/^\d+$/.test($(id).value))) bad = 'Enter whole numbers for generation, costs and reserve; use 0 when there is none.';
+  else if (!kwh && !state.safeguards) bad = 'Enter the kWh generated this month.';
+  else if (kwh > 1000000 || costs > 1500000000 || reserve > 1500000000) bad = 'Generation must be at most 1,000,000 kWh; costs and reserve at most Rp1,500,000,000 each.';
+  else if (state.safeguards && state.statusUnavailable) bad = 'Refresh reporting status before publishing.';
+  else if (state.safeguards && period !== state.nextReportingPeriod) bad = 'Report the next required month without skipping any months.';
+  else if (state.safeguards && state.timestamp < state.reportingOpensAt) bad = `This month is still in progress. Reporting opens ${utcDate(state.reportingOpensAt)}.`;
+  else if (!state.safeguards && dist <= 0) bad = 'This older contract requires positive distributable income.';
+  else if (!(period > state.lastPeriod)) bad = 'This month is already reported. Pick a later month.';
+  else if (BigInt(dist) * GWEI > state.ethBalance) bad = `This deposit is more than your ${simulation ? 'demo balance' : 'wallet'} holds (${balanceText()}).${onSepolia() ? ' Get more test ETH from a Sepolia faucet.' : ''}`;
+  return { kwh, costs, reserve, receipts, dist, loss, period, ok: !bad, bad };
+}
+function renderBreakdown() {
+  if (!state || !isOperator()) return;
+  const r = breakdown(), width = value => `${r.receipts > 0 ? Math.max(0, Math.min(100, value / r.receipts * 100)) : 0}%`;
+  $('#bd-receipts-note').textContent = `${fmt(r.kwh)} kWh × ${idr(TARIFF_IDR)}`;
+  $('#bd-receipts').textContent = idr(r.receipts);
+  $('#bd-costs').textContent = idr(r.costs);
+  $('#bd-reserve').textContent = idr(r.reserve);
+  $('#bar-costs').style.width = width(r.costs);
+  $('#bar-reserve').style.width = width(r.reserve);
+  $('#bar-dist').style.width = width(Math.max(0, r.dist));
+  $('#bd-ok').hidden = !r.ok;
+  $('#bd-bad').hidden = r.ok;
+  $('#bd-bad').textContent = r.bad;
+  $('#report-kwh').classList.toggle('invalid', (!r.kwh && !state.safeguards) || r.kwh > 1000000);
+  $('#zero-income-note').hidden = !r.ok || r.dist !== 0;
+  $('#zero-income-note').textContent = `Zero-income report: no deposit is required.${r.loss ? ` Shortfall after costs and reserves: ${idr(r.loss)}. No holder debt is created and the shortfall is not carried forward.` : ''}`;
+  if (r.ok) {
+    const deposit = BigInt(r.dist) * GWEI;
+    $('#bd-dist').textContent = idr(r.dist);
+    $('#bd-dist-eth').textContent = eth(deposit);
+    $('#bd-per-share').textContent = idr(r.dist / 1000);
+    $('#bd-per-share-eth').textContent = eth(deposit / 1000n);
+  }
+  setActionButton($('#publish-button'), 'publish', wrongNetwork() ? switchLabel() : `Publish ${periodLabel(r.period)} report`, wrongNetwork() || r.ok);
 }
 function renderOperator() {
-  $('#operator-page').innerHTML = `<div class="page-heading"><div><div class="eyebrow">THE DEMO LAB</div><h1>Make sunshine move.</h1><p>Simulate a month. Fund a payout. Watch your shares work.</p></div><span class="outline-tag">OPERATOR ONLY</span></div>
-    ${!isOperator() ? '<div class="notice">Switch to the operator to run the demo. <button class="text-button" type="button" data-choose-wallet>Choose the operator wallet →</button></div>' : ''}
-    <article class="card" id="operator-reporting" aria-live="polite"></article>
-    <div class="operator-grid" style="margin-top:22px"><article class="card"><div class="section-heading"><h3>Simulate an energy report</h3><span class="small-tag">SIMULATED DATA</span></div><p>Sample data. No solar hardware connected.</p><form id="report-form" class="operator-form"><div class="field"><label for="report-month">Reporting month</label><input id="report-month" type="month" min="${nextPeriod()}" max="${state?.safeguards ? nextPeriod() : '2100-12'}" value="${nextPeriod()}" required /></div><div class="field"><label for="generation">Electricity generated (kWh)</label><input id="generation" type="number" min="${state?.safeguards ? 0 : 1}" max="1000000" step="1" value="1200" required /></div><div class="field"><label for="operating-costs">Operating costs (demo IDR)</label><input id="operating-costs" type="number" min="0" max="1500000000" step="1" value="400000" required /></div><div class="field"><label for="reserve">Maintenance reserve (demo IDR)</label><input id="reserve" type="number" min="0" max="1500000000" step="1" value="200000" required /></div><div class="full-width"><div class="notice">Demo tariff: Rp1,500 / kWh.</div><button type="submit" id="publish-button" data-write class="primary-button" style="margin-top:20px" ${!isOperator() || busy ? 'disabled' : ''}>Publish report & deposit income →</button><p class="form-footnote">${state?.safeguards ? 'Report each completed UTC month in order. Zero-income reports require no deposit.' : 'One report per month. Paid in test ETH.'}</p></div></form></article>
-    <article class="card"><h3>Where the income goes</h3><div id="report-calculation"></div><p>Each share earns 1/1,000 of the deposit. Unsold shares belong to the operator.</p></article></div>
-    <article class="card activity-card"><div class="section-heading"><div><h3>Published reports</h3><p>${simulation ? 'Simulated reports and deposits.' : 'Sample reports. Verifiable deposits.'}</p></div></div>${reportTable()}</article>
-    <article class="card activity-card"><div class="section-heading"><div><h3>Purchase proceeds</h3><p>${demoIdr(state?.proceeds ?? 0n)} available. Holder income stays protected.</p></div><button type="button" id="withdraw-button" data-write class="secondary-button" ${!isOperator() || !state?.proceeds || busy ? 'disabled' : ''}>Withdraw proceeds</button></div></article>`;
-  $('#report-form').oninput = updateReport;
-  $('#report-form').onsubmit = event => {
-    event.preventDefault();
-    try {
-      const report = readReport();
-      transact(c => c.publishReport(report.period, report.kwh, report.costs, report.reserve, { value: BigInt(report.net) * 1000000000n }), `Report published. ${idr(report.net)} in demo income allocated to holders.`);
-    } catch (error) { toast(errorMessage(error), true); }
-  };
-  $('#withdraw-button').onclick = () => transact(c => c.withdrawSaleProceeds(), 'Purchase proceeds withdrawn. Holder income remains reserved.');
-  renderReporting();
-  updateReport();
-}
-function readReport() {
-  const month = $('#report-month').value;
-  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new Error('Choose a valid reporting month.');
-  const period = Number(month.replace('-', ''));
-  if (period < 200001 || period > 210012 || period <= (state?.lastPeriod ?? 0)) throw new Error('Choose a month after the latest published report.');
-  if (state?.safeguards) {
-    if (state.statusUnavailable) throw new Error('Refresh reporting status before publishing.');
-    if (period !== state.nextReportingPeriod) throw new Error('Report the next required month, without skipping any months.');
-    if (state.timestamp < state.reportingOpensAt) throw new Error(`This month is still in progress. Reporting opens ${utcDate(state.reportingOpensAt)}.`);
+  const operator = isOperator();
+  $('#op-guard').hidden = operator;
+  $('#op-loading').hidden = !(operator && !state && !loadError);
+  $('#op-content').hidden = !(operator && state);
+  if (!operator) {
+    const text = 'Only the operator wallet can publish monthly reports and withdraw sale proceeds.';
+    $('#op-guard-text').textContent = hasDemoWallets() && !usingMetaMask ? `${text} For the demo, you can switch to it.` : deployment ? `${text} The operator is ${short(deployment.operator)}.` : text;
+    $('#op-guard-button').textContent = !address ? 'Connect wallet' : usingMetaMask ? 'Switch account in MetaMask' : 'Use operator wallet (demo)';
+    return;
   }
-  const kwh = integer($('#generation').value, state?.safeguards ? 0 : 1, 1000000, 'Generation');
-  const costs = integer($('#operating-costs').value, 0, 1500000000, 'Operating costs');
-  const reserve = integer($('#reserve').value, 0, 1500000000, 'Maintenance reserve');
-  const { gross, net, loss } = reportAmounts(kwh, costs, reserve);
-  if (!state?.safeguards && net <= 0) throw new Error('This older contract requires positive distributable income.');
-  return { period, kwh, costs, reserve, gross, net, loss };
-}
-function updateReport() {
-  try {
-    const r = readReport();
-    $('#report-calculation').innerHTML = `<div class="calculation"><div class="order-row"><span>Electricity receipts</span><strong>${idr(r.gross)}</strong></div><div class="order-row"><span>Operating costs</span><strong>− ${idr(r.costs)}</strong></div><div class="order-row"><span>Maintenance reserve</span><strong>− ${idr(r.reserve)}</strong></div><div class="order-row total"><span>To distribute</span><strong>${idr(r.net)}</strong></div></div><div class="calculation"><div class="order-row"><span>Per ownership unit</span><strong>${idr(r.net / 1000)}</strong></div><div class="order-row"><span>100 shares receive</span><strong>${idr(r.net / 10)}</strong></div><div class="order-row"><span>${simulation ? 'Operator demo balance' : 'Test ETH deposit'}</span><strong>${simulation ? idr(state?.cash ?? 0) : formatEther(BigInt(r.net) * 1000000000n)}</strong></div></div>`;
-    $('#publish-button').disabled = busy || !isOperator() || !state;
-    if (r.net === 0) $('#report-calculation').insertAdjacentHTML('beforeend', `<p>Zero-income report: no deposit is required.${r.loss ? ` Shortfall after costs and reserves: ${idr(r.loss)}. This is recorded without creating holder debt or carrying losses into later reports.` : ''}</p>`);
-  } catch (error) {
-    $('#report-calculation').innerHTML = `<div class="notice error">${esc(errorMessage(error))}</div>`;
-    $('#publish-button').disabled = true;
+  if (!state) return;
+  $('#op-address').textContent = short(address);
+  const base = state.safeguards ? state.nextReportingPeriod : state.lastPeriod ? nextPeriod(state.lastPeriod) : currentPeriod();
+  const options = state.safeguards ? [base] : [base, nextPeriod(base), nextPeriod(nextPeriod(base))], select = $('#report-period');
+  if (select.dataset.options !== options.join()) {
+    const previous = Number(select.value);
+    select.innerHTML = options.map(period => `<option value="${period}">${periodLabel(period)}</option>`).join('');
+    select.value = String(options.includes(previous) ? previous : base);
+    select.dataset.options = options.join();
   }
+  const all = reports(), last = all.at(-1);
+  $('#last-published-note').textContent = last ? `Last published: ${periodLabel(last.period)}. Months must go in order.` : 'No reports yet. Start with your first month of production.';
+  renderBreakdown();
+  $('#reports-table').innerHTML = all.length
+    ? `<div class="table-scroll"><table class="report-table"><thead><tr><th scope="col">Month</th><th scope="col">kWh</th><th scope="col">Receipts</th><th scope="col">Costs</th><th scope="col">Reserve</th><th scope="col">Distributed</th><th scope="col">Per Sol Coin</th><th scope="col"><span class="visually-hidden">Receipt</span></th></tr></thead><tbody>${all.reverse().map(r => `<tr><td>${periodLabel(r.period)}</td><td>${fmt(r.kwh)}</td><td>${idr(r.kwh * TARIFF_IDR)}</td><td>${idr(r.costs)}</td><td>${idr(r.reserve)}</td><td>${demoIdr(r.deposited)}</td><td>${demoIdr(r.deposited / 1000n)}</td><td>${receipt(r, `${periodLabel(r.period)} report`)}</td></tr>`).join('')}</tbody></table></div>`
+    : `<div class="feed-empty"><div class="feed-empty-title">No reports yet</div><p>Your first monthly report will appear here once it's published. Shareholders can claim as soon as it confirms.</p></div>`;
+  const hasProceeds = state.proceeds > 0n;
+  $('#proceeds-rp').textContent = demoIdr(state.proceeds);
+  $('#proceeds-eth').textContent = eth(state.proceeds);
+  setActionButton($('#withdraw-button'), 'withdraw', wrongNetwork() ? switchLabel() : hasProceeds ? 'Withdraw to operator wallet' : 'Nothing to withdraw', wrongNetwork() || hasProceeds);
 }
-function reportTable() {
-  const reports = (state?.logs ?? []).filter(log => log.name === 'ReportPublished').reverse();
-  if (!reports.length) return '<div class="empty-state">Publish a month to start the income demo.</div>';
-  return `<div class="table-scroll"><table class="report-table"><thead><tr><th>Period</th><th>Generation</th><th>Costs</th><th>Reserve</th><th>Distributable</th><th>Per share</th><th>Proof</th></tr></thead><tbody>${reports.map(log => `<tr><td>${periodLabel(log.args.period)}</td><td>${log.args.kwh} kWh</td><td>${idr(log.args.costsIdr)}</td><td>${idr(log.args.reserveIdr)}</td><td>${demoIdr(log.args.deposited)}</td><td>${demoIdr(log.args.deposited / 1000n)}</td><td><button type="button" class="text-button" data-receipt="${log.transactionHash}">Receipt ↗</button></td></tr>`).join('')}</tbody></table></div>`;
+function renderMenu() {
+  if (!address) { closeMenu(); return; }
+  const role = isOperator() ? 'Operator' : 'Investor';
+  $('#menu-role').textContent = usingMetaMask ? `${role} wallet` : `${walletName} · ${role.toLowerCase()} wallet`;
+  $('#menu-address').textContent = address;
+  $('#menu-balance').textContent = state ? balanceText() : '—';
+  $('#menu-balance-sub').textContent = !state ? '' : simulation ? 'Demo money' : `${demoIdr(state.ethBalance)} at the demo scale`;
+  $('#menu-switch-label').textContent = usingMetaMask ? 'Switch MetaMask account' : 'Switch demo wallet';
+  $('#menu-switch-tag').hidden = usingMetaMask;
+  $('#menu-faucet').hidden = !onSepolia();
+  $('#menu-reset').hidden = !simulation;
 }
-async function refresh() {
-  if (!contract && !simulation) return;
-  const currentAddress = address;
-  let operatorBalance;
+function renderModal() {
+  for (const name of ['choose', 'connecting', 'wrong', 'switching']) $(`#modal-${name}`).hidden = ui.modal !== name;
+  if (ui.modal === 'wrong') $('#modal-wrong-text').textContent = `Your wallet is on ${chainName(walletChainId)}. Sol Invictus only works on ${onSepolia() ? 'the Sepolia test network' : 'the local test chain'}, so nothing here touches real money.`;
+  const dialog = $('#wallet-modal');
+  if (ui.modal && !dialog.open) dialog.showModal();
+  if (!ui.modal && dialog.open) dialog.close();
+}
+function renderWalletOptions() {
+  const options = hasDemoWallets() ? [[1, 'Alice', 'Demo investor', 'A', 'tone-maroon'], [2, 'Budi', 'Demo investor', 'B', 'tone-crimson'], [0, 'Solar operator', 'Run the income demo', 'S', 'tone-ink']] : [];
+  if (!simulation) options.push(['metamask', 'MetaMask', 'Browser extension', 'M', '']);
+  $('#wallet-options').innerHTML = options.map(([id, name, hint, letter, tone]) => `<button type="button" class="wallet-option" data-wallet="${id}"><span class="wallet-letter ${tone}" aria-hidden="true">${letter}</span><span class="wallet-option-text"><strong>${name}</strong><small>${hint}</small></span><svg class="icon" aria-hidden="true"><use href="#i-next" /></svg></button>`).join('');
+}
+function applyMode() {
+  const sepolia = onSepolia(), network = simulation ? 'Simulation' : sepolia ? 'Sepolia' : 'Local chain';
+  $('#banner-text').textContent = simulation ? 'Browser simulation. Fictional asset. No real money or blockchain transactions.'
+    : `${sepolia ? 'Sepolia testnet' : 'Local test chain'}. Fictional asset. No real money. No legal ownership rights.`;
+  $('#network-name').textContent = network;
+  $('#network-pill').title = simulation ? 'Browser simulation' : sepolia ? 'Sepolia testnet' : 'Local test chain';
+  $('#network-pill').setAttribute('aria-label', `Network: ${network}`);
+  $('#contract-link').hidden = !sepolia;
+  if (sepolia) $('#contract-link').href = `https://sepolia.etherscan.io/address/${deployment.address}`;
+  $('#modal-choose-text').textContent = simulation ? 'Pick a role. Each starts with Rp100,000,000 in demo money, saved in this browser tab only.'
+    : sepolia ? 'Sol Invictus runs on the Sepolia test network. Nothing here uses real money.' : 'Pick a funded demo wallet on the local test chain, or connect MetaMask.';
+  $('#modal-faucet').hidden = !sepolia;
+  $('#switch-network').textContent = switchLabel();
+  $('#modal-wrong-title').textContent = switchLabel();
+  $('#modal-switching-text').textContent = `Approve the switch to ${networkLabel()} in your wallet.`;
   if (simulation) {
-    state = simulation.snapshot(address);
-    operatorBalance = state.operatorBalance;
-  } else {
-  // ponytail: scan this single demo contract's history; use incremental indexing for long-lived projects.
-  const [available, revenue, lastPeriod, proceeds, operatorShares, balance, claimable, claimed, rawLogs, reporting] = await Promise.all([
-    contract.availableShares(), contract.totalRevenue(), contract.lastPeriod(), contract.saleProceeds(), contract.balanceOf(deployment.operator),
+    $('#pf-no-wallet p').textContent = 'Pick a demo wallet to see its Sol Coins and income. Everything stays in this browser tab.';
+    $('#how-note').textContent = 'This build is a browser simulation: the solar project, money, Sol Coins and reports are simulated and saved in this tab only. No wallet or blockchain is involved.';
+  } else if (!sepolia) {
+    $('#pf-no-wallet p').textContent = 'Your Sol Coins and income live in your wallet. Connecting lets Sol Invictus read them from the local test chain. It can\'t move anything without your approval.';
+    $('#how-note').textContent = 'The solar project and its reports are fictional. This build runs on a local test chain, so its transactions exist only on your computer. Rp1 of demo value equals 1 gwei of test ETH. That\'s a display scale, not an exchange rate.';
+  }
+  renderWalletOptions();
+}
+
+// Ownership ledger: one tile per Sol Coin on the project page
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const TOTAL = 1000, COLS = 40;
+const ledgerEl = $('#tiles'), tipEl = $('#tip');
+const tileEls = Array.from({ length: TOTAL }, () => document.createElement('i'));
+ledgerEl.append(...tileEls);
+const ledger = { kinds: [], geo: null, mx: -1e4, my: -1e4, rippling: false, painting: false, mine: undefined, owner: undefined, reports: undefined };
+function renderLedger() {
+  if (!state) return;
+  const sold = TOTAL - state.available, mine = address && !isOperator() ? Math.min(state.balance, sold) : 0;
+  const pick = Math.min(whole(ui.qty), state.available);
+  const fresh = ledger.owner === address && ledger.mine !== undefined && mine > ledger.mine ? mine - ledger.mine : 0;
+  for (let i = 0; i < TOTAL; i++) {
+    const kind = i < sold - mine ? 'sold' : i < sold ? 'mine' : i < sold + pick ? 'pick' : '';
+    if (ledger.kinds[i] !== kind) { ledger.kinds[i] = kind; tileEls[i].className = kind; }
+  }
+  for (let k = 0; k < fresh; k++) {
+    const tile = tileEls[sold - 1 - k];
+    tile.classList.add('fresh'); tile.style.animationDelay = `${Math.min(k * 7, 900)}ms`;
+    setTimeout(() => { tile.classList.remove('fresh'); tile.style.animationDelay = ''; }, 1600);
+  }
+  const reportCount = reports().length;
+  if (ledger.reports !== undefined && reportCount > ledger.reports) waveTiles();
+  ledger.reports = reportCount; ledger.mine = mine; ledger.owner = address;
+  ledgerEl.setAttribute('aria-label', `${fmt(sold)} of 1,000 Sol Coins bought${mine ? `, ${fmt(mine)} of them yours` : ''}`);
+}
+function waveTiles() {
+  if (reduceMotion) return;
+  tileEls.forEach((tile, i) => { tile.classList.remove('wave'); void tile.offsetWidth; tile.style.animationDelay = `${(i % COLS) * 14 + Math.floor(i / COLS) * 10}ms`; tile.classList.add('wave'); });
+  setTimeout(() => tileEls.forEach(tile => { tile.classList.remove('wave'); tile.style.animationDelay = ''; }), 1800);
+}
+function tileAt(x, y) {
+  const r = ledgerEl.getBoundingClientRect(), rows = TOTAL / COLS;
+  const col = Math.min(COLS - 1, Math.max(0, Math.floor((x - r.left - 4) / ((r.width - 8) / COLS))));
+  const row = Math.min(rows - 1, Math.max(0, Math.floor((y - r.top - 4) / ((r.height - 8) / rows))));
+  return row * COLS + col;
+}
+function paintTo(i) {
+  if (!state?.available) return;
+  setQty(Math.min(state.available, Math.max(1, i - (TOTAL - state.available) + 1)));
+}
+function showTip(text, x, y) {
+  tipEl.textContent = text; tipEl.classList.add('on');
+  tipEl.style.left = `${Math.min(Math.max(8, x + 14), innerWidth - tipEl.offsetWidth - 8)}px`; tipEl.style.top = `${y + 18}px`;
+}
+function ripple() {
+  ledger.geo ??= tileEls.map(tile => ({ x: tile.offsetLeft + tile.offsetWidth / 2, y: tile.offsetTop + tile.offsetHeight / 2 }));
+  let moving = false;
+  tileEls.forEach((tile, i) => {
+    const g = ledger.geo[i], target = 1 + .9 * Math.max(0, 1 - Math.hypot(g.x - ledger.mx, g.y - ledger.my) / 78) ** 2, cur = tile._scale ?? 1;
+    const next = Math.abs(target - cur) < .004 ? target : cur + (target - cur) * .35;
+    if (next !== cur) { tile._scale = next; tile.style.scale = next === 1 ? '' : next.toFixed(3); moving = true; }
+  });
+  if (moving) requestAnimationFrame(ripple); else ledger.rippling = false;
+}
+const kickRipple = () => { if (!reduceMotion && !ledger.rippling) { ledger.rippling = true; requestAnimationFrame(ripple); } };
+ledgerEl.addEventListener('pointerdown', event => {
+  if (!state || event.button > 0) return;
+  const i = tileAt(event.clientX, event.clientY);
+  if (i < TOTAL - state.available) return;
+  ledger.painting = true; ledgerEl.setPointerCapture(event.pointerId); paintTo(i);
+});
+ledgerEl.addEventListener('pointermove', event => {
+  const r = ledgerEl.getBoundingClientRect(), i = tileAt(event.clientX, event.clientY), kind = ledger.kinds[i];
+  ledger.mx = event.clientX - r.left; ledger.my = event.clientY - r.top;
+  if (ledger.painting) paintTo(i);
+  const name = `Sol Coin #${String(i + 1).padStart(4, '0')}`;
+  showTip(kind === 'mine' ? `${name} · Yours` : kind === 'sold' ? `${name} · Held by another investor` : `${name} · Available · ${idr(100000)}`, event.clientX, event.clientY);
+  if (event.pointerType === 'mouse') kickRipple();
+});
+ledgerEl.addEventListener('pointerleave', () => { ledger.mx = ledger.my = -1e4; tipEl.classList.remove('on'); kickRipple(); });
+for (const type of ['pointerup', 'pointercancel']) ledgerEl.addEventListener(type, () => { ledger.painting = false; });
+addEventListener('resize', () => { ledger.geo = null; });
+
+function burst(x, y) {
+  if (reduceMotion) return;
+  for (let i = 0; i < 22; i++) {
+    const dot = document.createElement('i'), angle = Math.random() * Math.PI * 2, speed = 90 + Math.random() * 150;
+    dot.className = 'confetti'; dot.style.left = `${x}px`; dot.style.top = `${y}px`; dot.style.background = ['#FABD3D', '#E95C05', '#F59A2B', '#FFFFFF'][i % 4];
+    document.body.append(dot);
+    dot.animate([{ transform: 'translate(0, 0) scale(1)', opacity: 1 }, { transform: `translate(${Math.cos(angle) * speed}px, ${Math.sin(angle) * speed - 60}px) scale(.2)`, opacity: 0 }], { duration: 900 + Math.random() * 400, easing: 'cubic-bezier(.2, .8, .3, 1)' }).onfinish = () => dot.remove();
+  }
+}
+
+// Income: how a month's sunshine becomes money in your wallet (My Sol Coins page)
+const inc = { whatIf: null, run: 0, played: false };
+const incNodes = [...document.querySelectorAll('#inc-pipe .inc-node')], incStops = ['12.5%', '37.5%', '62.5%', '87.5%'];
+const shortHash = hash => hash.startsWith('0x') ? short(hash) : hash;
+function incomeModel() {
+  const last = reports().at(-1), kwh = inc.whatIf ?? last?.kwh ?? 1200, costs = last?.costs ?? 420000, reserve = last?.reserve ?? 250000;
+  const receipts = kwh * TARIFF_IDR, dist = receipts - costs - reserve;
+  return { last, kwh, costs, reserve, receipts, dist, ok: dist > 0, perCoin: dist > 0 ? dist / 1000 : 0 };
+}
+function renderIncome() {
+  const m = incomeModel(), live = Boolean(m.last) && inc.whatIf === null, held = state.balance;
+  $('#inc-period').textContent = live ? `Latest report · ${periodLabel(m.last.period)}` : m.last ? 'What if · you choose the month' : 'Example month · no report yet';
+  $('#inc-kwh').textContent = `${fmt(m.kwh)} kWh`;
+  const slider = $('#inc-slider');
+  slider.min = Math.min(300, m.last?.kwh ?? 300); slider.max = Math.max(1600, m.last?.kwh ?? 1600); slider.value = m.kwh;
+  $('#inc-reset').hidden = inc.whatIf === null;
+  $('#inc-reset').textContent = m.last ? 'Back to latest report' : 'Back to the example';
+  $('#inc-help').textContent = live ? 'This is the latest report recorded on the blockchain. Slide to see what a different month would pay you.' : 'Preview only. Nothing is sent to the blockchain.';
+  const base = Math.max(m.receipts, 1), costsPct = Math.min(m.costs, m.receipts) / base * 100, reservePct = Math.min(m.reserve, Math.max(0, m.receipts - m.costs)) / base * 100;
+  $('#inc-bar-c').style.width = `${costsPct}%`; $('#inc-bar-r').style.width = `${reservePct}%`; $('#inc-bar-d').style.width = `${Math.max(0, 100 - costsPct - reservePct)}%`;
+  $('#inc-rec').textContent = idr(m.receipts);
+  $('#inc-dist').textContent = idr(Math.max(0, m.dist));
+  $('#inc-costs-lbl').textContent = `Costs ${idr(m.costs)}`;
+  $('#inc-reserve-lbl').textContent = `Reserve ${idr(m.reserve)}`;
+  $('#inc-err').hidden = m.ok;
+  $('#inc-err').textContent = `Costs and reserve (${idr(m.costs + m.reserve)}) are higher than this month's receipts, so there's nothing to share.`;
+  $('#inc-n0').textContent = `${fmt(m.kwh)} kWh`;
+  $('#inc-n1').textContent = m.ok ? `${idr(m.dist)} to share` : 'Nothing to share';
+  $('#inc-n2').textContent = m.ok ? `${idr(m.perCoin)} per coin` : '—';
+  $('#inc-n3').textContent = !m.ok ? '—' : held ? `${idr(held * m.perCoin)} for ${plural(held, 'coin')}` : 'You hold no Sol Coins';
+  $('#inc-block').hidden = !live;
+  if (live) {
+    $('#inc-block-text').textContent = `Block ${fmt(m.last.block)} · ${shortHash(m.last.hash)} · confirmed`;
+    $('#inc-block-receipt').innerHTML = receipt(m.last, `${periodLabel(m.last.period)} report`);
+  }
+}
+function incomeStatic() {
+  inc.run++; inc.played = true;
+  const lit = incomeModel().ok ? 4 : 2, packet = $('#inc-packet');
+  incNodes.forEach((node, i) => node.classList.toggle('on', i < lit));
+  packet.classList.add('go'); packet.style.left = incStops[lit - 1];
+  document.querySelectorAll('#inc-pips i').forEach(pip => pip.classList.add('on'));
+}
+async function playIncome() {
+  if (reduceMotion) { incomeStatic(); return; }
+  const run = ++inc.run, m = incomeModel(), live = Boolean(m.last) && inc.whatIf === null, packet = $('#inc-packet');
+  const pause = ms => new Promise(resolve => setTimeout(resolve, ms)), pips = [...document.querySelectorAll('#inc-pips i')];
+  const step = i => { incNodes[i].classList.add('on'); packet.classList.add('go'); packet.style.left = incStops[i]; };
+  inc.played = true;
+  incNodes.forEach(node => node.classList.remove('on')); pips.forEach(pip => pip.classList.remove('on')); packet.classList.remove('go'); packet.style.left = incStops[0];
+  step(0); await pause(800); if (run !== inc.run) return;
+  step(1); await pause(900); if (run !== inc.run) return;
+  if (!m.ok) return;
+  if (live) for (const pip of pips) { pip.classList.add('on'); await pause(450); if (run !== inc.run) return; }
+  step(2); await pause(900); if (run !== inc.run) return;
+  step(3);
+}
+$('#inc-slider').oninput = event => { inc.whatIf = Number(event.target.value); renderIncome(); incomeStatic(); };
+$('#inc-reset').onclick = () => { inc.whatIf = null; renderIncome(); playIncome(); };
+$('#inc-replay').onclick = () => playIncome();
+// Play the income story once, when it first scrolls into view.
+new IntersectionObserver(entries => { if (!inc.played && entries.some(entry => entry.isIntersecting)) playIncome(); }, { threshold: .4 }).observe($('#income'));
+
+// Dialogs
+function openModal(name) { closeMenu(); ui.modal = name; renderModal(); }
+function closeModal() {
+  if (ui.modal === 'connecting') connectAttempt++;
+  ui.modal = null; renderModal();
+}
+function openMenu() {
+  renderMenu();
+  if (!$('#wallet-menu').open) $('#wallet-menu').showModal();
+  $('#wallet-menu-button').setAttribute('aria-expanded', 'true');
+}
+function closeMenu() { if ($('#wallet-menu').open) $('#wallet-menu').close(); }
+
+// Chain state
+async function refresh() {
+  if (simulation) {
+    const snapshot = simulation.snapshot(address);
+    state = { ...snapshot, ethBalance: BigInt(Math.round(snapshot.cash * 1000)) * 1000000n };
+    render(); return;
+  }
+  if (!contract) return;
+  const currentAddress = address;
+  const [latest, available, revenue, lastPeriod, proceeds, balance, claimable, claimed, ethBalance, rawLogs, reporting] = await Promise.all([
+    provider.getBlockNumber(), contract.availableShares(), contract.totalRevenue(), contract.lastPeriod(), contract.saleProceeds(),
     currentAddress ? contract.balanceOf(currentAddress) : 0n, currentAddress ? contract.claimable(currentAddress) : 0n,
-    currentAddress ? contract.totalClaimed(currentAddress) : 0n,
-    provider.getLogs({ address: deployment.address, fromBlock: deployment.blockNumber, toBlock: 'latest' }),
+    currentAddress ? contract.totalClaimed(currentAddress) : 0n, currentAddress ? provider.getBalance(currentAddress) : 0n,
+    // ponytail: after one full scan, rescans only a short overlap of recent blocks; use a dedicated indexer for long-lived projects.
+    provider.getLogs({ address: deployment.address, fromBlock: scanFrom ?? deployment.blockNumber, toBlock: 'latest' }),
     readReportingStatus(),
   ]);
+  for (const log of rawLogs) logCache.set(`${log.transactionHash}:${log.index}`, { ...log, ...contract.interface.parseLog(log) });
+  scanFrom = Math.max(deployment.blockNumber, latest - 50);
   if (currentAddress !== address) return;
-  const parsed = rawLogs.map(log => ({ ...log, ...contract.interface.parseLog(log) }));
+  const parsed = [...logCache.values()].sort((a, b) => a.blockNumber - b.blockNumber || a.index - b.index);
   const purchases = new Set(parsed.filter(log => log.name === 'SharesPurchased').map(log => log.transactionHash));
   const logs = parsed.filter(log => log.name === 'Transfer' ? log.args.from !== ZeroAddress && !purchases.has(log.transactionHash) : log.name !== 'Approval');
-  state = { ...reporting, available: Number(available), revenue, lastPeriod: Number(lastPeriod), proceeds, balance: Number(balance), claimable, claimed, logs };
-    operatorBalance = operatorShares;
-  }
-  const { revenue, logs } = state;
-  const sold = 1000 - state.available;
-  $('#community-ownership').textContent = `${(Number(1000n - operatorBalance) / 10).toFixed(1)}%`;
-  $('#sold-caption').textContent = `${sold} shares purchased`;
-  $('#project-revenue').textContent = demoIdr(revenue);
-  $('#funding-label').textContent = `${sold.toLocaleString()} of 1,000 shares purchased`;
-  $('#funding-percent').textContent = `${(sold / 10).toFixed(1)}%`;
-  $('#funding-progress').value = sold;
-  $('#share-count').max = state.available;
-  $('#project-activity').className = '';
-  $('#project-activity').innerHTML = activityHTML(logs);
-  $('#connection-error').hidden = true;
-  renderPortfolio(); renderOperator(); updatePurchase();
+  state = { ...reporting, available: Number(available), revenue, lastPeriod: Number(lastPeriod), proceeds, balance: Number(balance), claimable, claimed, ethBalance, logs };
+  loadError = '';
+  render();
+  loadBlockTimes(logs);
 }
-async function chooseWallet(index) {
-  if (busy) return;
-  if (simulation) {
-    address = accounts[index]; walletName = labels[index];
-    $('#wallet-button').textContent = `${walletName} · demo ↗`;
-    $('#wallet-dialog').close();
-    await refresh(); return;
-  }
-  if (!provider || deployment.chainId !== 31337 || !['localhost', '127.0.0.1'].includes(location.hostname)) throw new Error('Demo wallets are available only on the local development chain.');
-  signer = await provider.getSigner(index);
-  address = await signer.getAddress();
-  walletName = labels[index];
-  $('#wallet-button').textContent = `${walletName} · demo ↗`;
-  $('#wallet-dialog').close();
-  await refresh();
-}
-async function connectBrowserWallet() {
-  if (busy || connecting) return;
-  if (!deployment) throw new Error('The project is not connected to a blockchain yet.');
-  connecting = true;
-  $('#browser-wallet').disabled = true;
+async function loadBlockTimes(logs) {
+  const mine = logs.filter(log => Object.values(log.args).some(value => typeof value === 'string' && same(value, address)));
+  const missing = [...new Set([...logs.slice(-40), ...mine.slice(-20)].map(log => log.blockNumber))].filter(block => !blockTimes.has(block));
+  if (!missing.length) return;
   try {
-    const selected = await getMetaMaskProvider();
-    if (selected !== walletProvider) {
-      for (const event of ['accountsChanged', 'chainChanged', 'disconnect']) {
-        walletProvider?.removeListener?.(event, resetWallet);
-        selected.on?.(event, resetWallet);
-      }
-      walletProvider = selected;
-    }
-    resetWallet();
-    await walletProvider.request({ method: 'eth_requestAccounts' });
-    await ensureWalletNetwork(walletProvider, deployment.chainId);
-    const browser = new BrowserProvider(walletProvider);
-    if ((await browser.getNetwork()).chainId !== BigInt(deployment.chainId)) throw new Error('Select the configured test network in your wallet.');
-    signer = await browser.getSigner(); address = await signer.getAddress(); walletName = short(address);
-    $('#wallet-button').textContent = `MetaMask · ${walletName} ↗`; $('#wallet-dialog').close(); await refresh();
-  } finally {
-    connecting = false;
-    $('#browser-wallet').disabled = false;
-  }
+    const blocks = await Promise.all(missing.map(block => provider.getBlock(block)));
+    blocks.forEach((block, i) => { if (block) blockTimes.set(missing[i], block.timestamp); });
+    render();
+  } catch { /* Relative times are optional; block numbers stay visible. */ }
 }
-async function transact(action, successMessage) {
-  if (busy) return;
+function manualRefresh() {
+  refresh().then(() => info('Up to date', simulation ? 'Demo state reloaded.' : `Latest activity loaded from ${networkLabel()}.`)).catch(error => notify(error, "Couldn't refresh"));
+}
+async function transact(key, title, action, success) {
+  if (ui.busy) return false;
   if (simulation) {
     try {
       await action(simulation.forAccount(address));
-      await refresh(); toast(successMessage);
-    } catch (error) { toast(errorMessage(error), true); }
-    return;
+      await refresh();
+      dismissLater(pushToast({ status: 'confirmed', title, body: success() }), 9000);
+      return true;
+    } catch (error) { pushToast({ status: 'failed', title, body: errorMessage(error) }); return false; }
   }
-  if (!signer) { $('#wallet-dialog').showModal(); return; }
-  busy = true;
-  document.querySelectorAll('[data-write]').forEach(button => { button.disabled = true; });
-  updatePurchase();
-  let confirmed = false;
+  if (wrongNetwork()) { openModal('wrong'); return false; }
+  if (!signer) { openModal('choose'); return false; }
+  ui.busy = key; ui.busyStage = 'wallet';
+  const id = pushToast({ status: 'wallet', title, body: 'Confirm the request in your wallet.' });
+  render();
   try {
     const chainId = await signer.provider.send('eth_chainId', []);
-    if (BigInt(chainId) !== BigInt(deployment.chainId)) throw new Error('Your wallet is on the wrong network. Reconnect to the configured test network.');
+    if (BigInt(chainId) !== BigInt(deployment.chainId)) throw new Error(`Your wallet is on the wrong network. ${switchLabel()} and try again.`);
     if (signer.provider !== provider) {
       const connectedAccounts = await signer.provider.send('eth_accounts', []);
-      if (connectedAccounts[0]?.toLowerCase() !== address?.toLowerCase()) throw new Error('Your account changed. Reconnect your wallet before continuing.');
+      if (!same(connectedAccounts[0], address)) throw new Error('Your account changed. Reconnect your wallet before continuing.');
     }
-    toast('Waiting for transaction confirmation…');
     const tx = await action(contract.connect(signer));
+    ui.busyStage = 'pending';
+    patchToast(id, { status: 'pending', body: `Sent to ${networkLabel()}. This usually takes 10 to 20 seconds.`, hash: tx.hash });
+    render();
     const receipt = await tx.wait();
     if (receipt.status !== 1) throw new Error('The transaction reverted.');
-    confirmed = true;
-    busy = false;
-    await refresh();
-    toast(successMessage);
-    return receipt.hash;
+    ui.busy = null;
+    try { await refresh(); patchToast(id, { status: 'confirmed', body: success() }); }
+    catch { patchToast(id, { status: 'confirmed', body: 'Confirmed, but the page could not refresh. Use Refresh to load the latest state.' }); }
+    dismissLater(id, 9000);
+    return true;
   } catch (error) {
-    toast(confirmed ? 'Transaction confirmed, but the display could not refresh. Press Refresh to reload the chain state.' : errorMessage(error), true);
+    if (isRejection(error)) { patchToast(id, { status: 'rejected', body: errorMessage(error) }); dismissLater(id, 7000); }
+    else patchToast(id, { status: 'failed', body: errorMessage(error) });
+    return false;
   } finally {
-    busy = false; updatePurchase();
-    if (!confirmed && state) { renderPortfolio(); renderOperator(); }
+    ui.busy = null; ui.busyStage = null; render();
   }
 }
-async function showReceipt(hash) {
-  if (simulation) {
-    const record = state.logs.find(log => log.transactionHash === hash);
-    $('#receipt-content').textContent = record ? `Simulation record ${record.transactionHash}. ${record.name} by ${nameFor(record.actor)}. This action is saved in this browser tab only. No blockchain transaction, real payment, or gas fee was created.` : 'Demo record not found.';
-    $('#receipt-dialog .dialog-heading h2').textContent = 'Your demo record.';
-    $('#receipt-dialog').showModal(); return;
-  }
-  $('#receipt-content').textContent = 'Reading transaction from the chain…';
-  $('#receipt-dialog').showModal();
-  try {
-    const receipt = await provider.getTransactionReceipt(hash);
-    if (!receipt) throw new Error('This transaction is not available on the current chain.');
-    $('#receipt-content').innerHTML = `<span class="small-tag green">${receipt.status === 1 ? 'CONFIRMED' : 'REVERTED'}</span><p style="margin-top:22px">Transaction hash</p><div class="receipt-value">${esc(hash)}</div><div class="order-row"><span>Network</span><strong>${deployment.chainId === 31337 ? 'Local Ethereum · 31337' : 'Ethereum Sepolia'}</strong></div><div class="order-row"><span>Block number</span><strong>${receipt.blockNumber}</strong></div><div class="order-row"><span>Gas used</span><strong>${receipt.gasUsed.toLocaleString()}</strong></div><p style="margin-top:18px">Sender</p><div class="receipt-value">${esc(receipt.from)}</div><p>Contract</p><div class="receipt-value">${esc(receipt.to)}</div>${deployment.chainId === 11155111 ? `<a class="text-button" href="https://sepolia.etherscan.io/tx/${hash}" target="_blank" rel="noopener noreferrer">View on Sepolia Etherscan ↗</a>` : '<p>Local transactions are verifiable on this running node. They do not appear on a public block explorer.</p>'}`;
-  } catch (error) { $('#receipt-content').textContent = errorMessage(error); }
+
+// Wallets
+async function chooseWallet(index, quiet = false) {
+  if (ui.busy) return;
+  if (!simulation && (!provider || deployment.chainId !== 31337 || !['localhost', '127.0.0.1'].includes(location.hostname))) throw new Error('Demo wallets are available only on the local development chain.');
+  usingMetaMask = false; walletChainId = null; accountTarget = null;
+  if (simulation) address = accounts[index];
+  else { signer = await provider.getSigner(index); address = await signer.getAddress(); }
+  walletName = labels[index];
+  closeMenu(); ui.modal = null; renderModal();
+  await refresh();
+  if (!quiet) info('Wallet connected', `Using the ${walletName} demo wallet.`);
 }
-$('#wallet-button').onclick = () => { if (!busy) $('#wallet-dialog').showModal(); };
-$('#about-button').onclick = () => $('#about-dialog').showModal();
-document.querySelectorAll('[data-close]').forEach(button => button.onclick = () => button.closest('dialog').close());
-document.querySelectorAll('[data-wallet]').forEach(button => button.onclick = () => chooseWallet(Number(button.dataset.wallet)).catch(error => toast(errorMessage(error), true)));
-$('#browser-wallet').onclick = () => connectBrowserWallet().catch(error => toast(errorMessage(error), true));
-$('#share-count').oninput = updatePurchase;
-$('#decrease-shares').onclick = () => { $('#share-count').value = Math.max(1, Number($('#share-count').value) - 10); updatePurchase(); };
-$('#increase-shares').onclick = () => { $('#share-count').value = Math.min(state?.available ?? 1000, Number($('#share-count').value) + 10); updatePurchase(); };
-$('#buy-form').onsubmit = event => {
-  event.preventDefault();
+function attachWallet(selected) {
+  if (selected === walletProvider) return;
+  for (const [event, handler] of [['accountsChanged', onAccountsChanged], ['chainChanged', onChainChanged], ['disconnect', onWalletDisconnect]]) {
+    walletProvider?.removeListener?.(event, handler);
+    selected.on?.(event, handler);
+  }
+  walletProvider = selected;
+}
+async function useAccount(account) {
+  const next = getAddress(account);
+  if (next === accountTarget) return false;
+  accountTarget = next;
+  let chainId;
+  try { chainId = Number(await walletProvider.request({ method: 'eth_chainId' })); }
+  catch (error) { if (accountTarget === next) accountTarget = null; throw error; }
+  if (accountTarget !== next) return false;
+  usingMetaMask = true; walletChainId = chainId; address = next; walletName = 'MetaMask';
+  signer = chainId === deployment.chainId ? await new BrowserProvider(walletProvider).getSigner(next) : null;
+  render();
+  refresh().catch(error => notify(error, "Couldn't load your wallet"));
+  return true;
+}
+async function connectMetaMask() {
+  if (ui.busy) return;
+  if (!deployment || simulation) throw new Error('The project is not connected to a blockchain yet.');
+  const attempt = ++connectAttempt;
+  openModal('connecting');
   try {
-    const quantity = integer($('#share-count').value, 1, state?.available ?? 1000, 'Shares');
-    transact(c => c.buyShares(quantity, { value: BigInt(quantity) * 100000000000000n }), `${quantity} SURYA shares purchased. See them in My shares.`);
-  } catch (error) { toast(errorMessage(error), true); }
-};
-$('#refresh-button').onclick = () => refresh().then(() => toast(simulation ? 'Demo updated.' : 'Project updated from the blockchain.')).catch(error => toast(errorMessage(error), true));
-document.addEventListener('click', event => {
-  const receipt = event.target.closest('[data-receipt]');
-  if (receipt) showReceipt(receipt.dataset.receipt);
-  if (event.target.closest('[data-choose-wallet]') && !busy) $('#wallet-dialog').showModal();
-});
-window.addEventListener('hashchange', showPage);
+    const selected = await getMetaMaskProvider();
+    attachWallet(selected);
+    const [account] = await selected.request({ method: 'eth_requestAccounts' });
+    if (attempt !== connectAttempt) return;
+    if (!account) throw new Error('MetaMask did not share an account. Unlock MetaMask and try again.');
+    accountTarget = null;
+    await useAccount(account);
+    if (attempt !== connectAttempt) return;
+    ui.modal = wrongNetwork() ? 'wrong' : null; renderModal();
+    if (!wrongNetwork()) info('Wallet connected', `Connected with MetaMask on ${networkLabel()}.`);
+  } catch (error) {
+    if (attempt !== connectAttempt) return;
+    ui.modal = 'choose'; renderModal();
+    if (isRejection(error)) dismissLater(pushToast({ status: 'rejected', title: 'Connection cancelled', body: 'Nothing was shared with Sol Invictus.' }), 7000);
+    else notify(error, "Couldn't connect");
+  }
+}
+const announceAccount = () => info('Account changed', `Now using ${short(address)}${isOperator() ? ', the operator wallet' : ''}.`);
+function onAccountsChanged(list) {
+  if (!usingMetaMask) return;
+  if (!list?.length) { resetWallet(); info('Wallet disconnected', 'MetaMask disconnected this site.'); return; }
+  useAccount(list[0]).then(changed => changed && announceAccount()).catch(error => notify(error, "Couldn't switch account"));
+}
+async function onChainChanged(chainId) {
+  if (!usingMetaMask || !address) return;
+  walletChainId = Number(chainId);
+  signer = walletChainId === deployment.chainId ? await new BrowserProvider(walletProvider).getSigner(address).catch(() => null) : null;
+  if (!wrongNetwork() && ui.modal === 'wrong') ui.modal = null;
+  render();
+}
+function onWalletDisconnect() { if (usingMetaMask) resetWallet(); }
+async function switchAccount() {
+  closeMenu();
+  if (!usingMetaMask) { openModal('choose'); return; }
+  try {
+    // MetaMask shows its account picker; the chosen account becomes the first one returned.
+    await walletProvider.request({ method: 'wallet_requestPermissions', params: [{ eth_accounts: {} }] });
+    const [account] = await walletProvider.request({ method: 'eth_accounts' });
+    if (account && await useAccount(account)) announceAccount();
+  } catch (error) { if (!isRejection(error)) notify(error, "Couldn't switch account"); }
+}
+async function switchNetwork() {
+  if (!walletProvider) return;
+  openModal('switching');
+  try {
+    await ensureWalletNetwork(walletProvider, deployment.chainId);
+    await onChainChanged(await walletProvider.request({ method: 'eth_chainId' }));
+    ui.modal = null; renderModal();
+    info(`Switched to ${networkLabel()}`, "You're on the right network now.");
+  } catch (error) {
+    openModal('wrong');
+    if (isRejection(error)) dismissLater(pushToast({ status: 'rejected', title: 'Network switch cancelled', body: `Your wallet is still on ${chainName(walletChainId)}.` }), 7000);
+    else notify(error, "Couldn't switch network");
+  }
+}
 function resetWallet() {
-  signer = null; address = null; walletName = null;
-  $('#wallet-button').textContent = 'Connect MetaMask ↗';
+  signer = null; address = null; walletName = null; usingMetaMask = false; walletChainId = null; accountTarget = null;
+  closeMenu(); render();
   refresh().catch(() => {});
 }
-showPage(); renderPortfolio(); renderOperator();
+function disconnect() {
+  if (usingMetaMask) walletProvider?.request({ method: 'wallet_revokePermissions', params: [{ eth_accounts: {} }] }).catch(() => {});
+  ui.modal = null;
+  resetWallet();
+  info('Disconnected', simulation ? 'Pick a demo wallet to continue.' : 'Your wallet is no longer connected to Sol Invictus.');
+}
+async function copyAddress() {
+  if (!address) return;
+  try { await navigator.clipboard.writeText(address); info('Address copied', short(address)); }
+  catch { notify(new Error(`Copy it from the wallet menu: ${address}`), "Couldn't copy the address"); }
+}
+
+// Events
+function setQty(n) { ui.qty = String(n); $('#qty').value = ui.qty; renderBuy(); }
+document.addEventListener('click', event => {
+  const target = event.target.closest('[data-connect],[data-close-modal],[data-wallet],[data-dismiss],[data-filter],[data-preset],[data-refresh]');
+  if (!target) return;
+  if (target.matches('[data-connect]')) openModal('choose');
+  else if (target.matches('[data-close-modal]')) closeModal();
+  else if (target.matches('[data-wallet]')) {
+    const id = target.dataset.wallet;
+    (id === 'metamask' ? connectMetaMask() : chooseWallet(Number(id))).catch(error => notify(error, "Couldn't connect"));
+  }
+  else if (target.matches('[data-dismiss]')) dismissToast(Number(target.dataset.dismiss));
+  else if (target.matches('[data-filter]')) { ui.filter = target.dataset.filter; renderProject(); }
+  else if (target.matches('[data-preset]')) setQty(Math.min(Number(target.dataset.preset), Math.max(state?.available ?? 1000, 1)));
+  else manualRefresh();
+});
+$('#wallet-modal').addEventListener('close', () => {
+  if ($('#wallet-modal').open) return;
+  if (ui.modal === 'connecting') connectAttempt++;
+  ui.modal = null;
+});
+$('#wallet-menu').addEventListener('click', event => { if (event.target === event.currentTarget) closeMenu(); });
+$('#wallet-menu').addEventListener('close', () => $('#wallet-menu-button').setAttribute('aria-expanded', 'false'));
+$('#wallet-menu-button').onclick = openMenu;
+$('#copy-address').onclick = copyAddress;
+$('#menu-copy').onclick = copyAddress;
+$('#menu-switch').onclick = () => { if (usingMetaMask) switchAccount(); else openModal('choose'); };
+$('#menu-reset').onclick = async () => {
+  try { simulation.reset(); await chooseWallet(1, true); info('Demo reset', 'Everyone starts fresh.'); }
+  catch (error) { notify(error, "Couldn't reset the demo"); }
+};
+$('#menu-disconnect').onclick = disconnect;
+$('#modal-disconnect').onclick = disconnect;
+$('#wrong-network').onclick = () => openModal('wrong');
+$('#switch-network').onclick = switchNetwork;
+$('#pf-switch').onclick = () => {
+  if (usingMetaMask) switchAccount();
+  else chooseWallet(1).catch(error => notify(error));
+};
+$('#op-guard-button').onclick = () => {
+  if (!address) openModal('choose');
+  else if (usingMetaMask) switchAccount();
+  else chooseWallet(0).catch(error => notify(error));
+};
+$('#qty').oninput = event => {
+  const value = digits(event.target.value, 4);
+  if (value !== event.target.value) event.target.value = value;
+  ui.qty = value; renderBuy();
+};
+$('#qty-dec').onclick = () => setQty(Math.max(1, whole(ui.qty) - 1));
+$('#qty-inc').onclick = () => setQty(Math.min(Math.max(state?.available ?? 1000, 1), whole(ui.qty) + 1));
+$('#buy-form').onsubmit = event => {
+  event.preventDefault();
+  if (!state) return;
+  if (!address) { openModal('choose'); return; }
+  if (wrongNetwork()) { openModal('wrong'); return; }
+  const q = whole(ui.qty);
+  if (state.safeguards && (!state.purchasesAllowed || state.statusUnavailable)) return;
+  if (isOperator() || q < 1 || q > state.available) return;
+  transact('buy', `Buy ${plural(q, 'Sol Coin')}`, c => c.buyShares(q, { value: BigInt(q) * SHARE_PRICE }),
+    () => `You now own ${plural(state.balance, 'Sol Coin')}, ${pct(state.balance)} of the project.`);
+};
+$('#claim-button').onclick = () => {
+  if (wrongNetwork()) { openModal('wrong'); return; }
+  const amount = state?.claimable ?? 0n;
+  if (!amount) return;
+  const rect = $('#claim-button').getBoundingClientRect();
+  transact('claim', `Claim ${demoIdr(amount)}`, c => c.claimRevenue(), () => `${demoIdr(amount)} (${eth(amount)}) is in your ${simulation ? 'demo balance' : 'wallet'}.`)
+    .then(claimed => { if (claimed) burst(rect.left + rect.width / 2, rect.top + rect.height / 2); });
+};
+$('#send-form').oninput = event => {
+  if (event.target.id === 'send-qty') event.target.value = digits(event.target.value, 4);
+  renderPortfolio();
+};
+$('#send-max').onclick = () => { $('#send-qty').value = String(state?.balance ?? 0); renderPortfolio(); };
+$('#send-demo').onclick = () => { $('#send-to').value = $('#send-demo').dataset.address; renderPortfolio(); };
+$('#send-form').onsubmit = async event => {
+  event.preventDefault();
+  if (wrongNetwork()) { openModal('wrong'); return; }
+  const check = sendCheck();
+  if (!check.ok || !address || isOperator()) return;
+  const sent = await transact('send', `Send ${plural(check.q, 'Sol Coin')}`, c => c.transfer(check.to, check.q),
+    () => `${plural(check.q, 'Sol Coin')} ${check.q === 1 ? 'is' : 'are'} now with ${nameFor(check.to)}. Income you earned before sending stays with you.`);
+  if (sent) { $('#send-to').value = ''; $('#send-qty').value = ''; renderPortfolio(); }
+};
+$('#report-form').oninput = event => {
+  if (event.target.matches('input')) event.target.value = digits(event.target.value, 10);
+  renderBreakdown();
+};
+$('#report-form').onsubmit = event => {
+  event.preventDefault();
+  if (wrongNetwork()) { openModal('wrong'); return; }
+  if (!state || !isOperator()) return;
+  const r = breakdown();
+  if (!r.ok) return;
+  transact('publish', `Publish ${periodLabel(r.period)} report`, c => c.publishReport(r.period, r.kwh, r.costs, r.reserve, { value: BigInt(r.dist) * GWEI }),
+    () => `${idr(r.dist)} is now claimable by shareholders, ${idr(r.dist / 1000)} per Sol Coin.`);
+};
+$('#withdraw-button').onclick = () => {
+  if (wrongNetwork()) { openModal('wrong'); return; }
+  const amount = state?.proceeds ?? 0n;
+  if (!amount || !isOperator()) return;
+  transact('withdraw', `Withdraw ${demoIdr(amount)}`, c => c.withdrawSaleProceeds(), () => `${demoIdr(amount)} (${eth(amount)}) was sent to the operator wallet.`);
+};
+$('#pause-purchases').onclick = () => {
+  if (wrongNetwork()) { openModal('wrong'); return; }
+  if (!state?.safeguards || !isOperator()) return;
+  const paused = !state.purchasesPaused;
+  transact('pause', paused ? 'Pause purchases' : 'Remove manual purchase pause', c => c.setPurchasesPaused(paused),
+    () => paused ? 'Claims and transfers remain available.' : 'Manual pause removed. Overdue reporting still blocks purchases.');
+};
+async function advanceDemoClock(target) {
+  try { if (target > simulation.snapshot(address).timestamp) simulation.advanceTo(target); await refresh(); }
+  catch (error) { notify(error); }
+}
+$('#advance-report-clock').onclick = () => advanceDemoClock(state.reportingOpensAt);
+$('#advance-overdue-clock').onclick = () => advanceDemoClock(state.reportDueAt + 1);
+window.addEventListener('hashchange', showPage);
+// Pick up purchases, reports and claims made by other wallets.
+setInterval(() => { if (contract && !document.hidden && !ui.busy) refresh().catch(() => {}); }, 30000);
+document.addEventListener('visibilitychange', () => { if (contract && !document.hidden && !ui.busy) refresh().catch(() => {}); });
+showPage(); renderWalletOptions(); render();
+
 async function initialize() {
   if (simulationMode) {
     simulation = createSimulation(sessionStorage);
     accounts = demoAccounts;
     deployment = { operator: accounts[0], chainId: null };
-    $('#network-badge').textContent = 'Browser simulation';
-    $('#wallet-dialog > p').textContent = 'Choose a role. Each starts with Rp100,000,000 in demo money.';
-    $('#wallet-dialog .form-footnote').textContent = 'Simulated balances only. No wallet installation needed.';
-    $('#browser-wallet').hidden = true;
-    $('.demo-note').textContent = '✳ Interactive simulation. No real money or blockchain transactions.';
-    $('.ownership-label').textContent = 'Your shares. Simulated for the demo.';
-    $('.price-note').textContent = 'Use your demo balance. No payment required.';
-    $('.activity-card h2').textContent = 'Demo activity';
-    $('.demo-explainer p').textContent = 'Buy, transfer, and claim using a browser simulation. No hardware, wallet, or blockchain connection is required.';
-    $('.chain-hub .pill').textContent = 'Simulated shared record';
-    $('.three-steps article:nth-child(2) h3').textContent = 'Try shared ownership.';
-    $('.three-steps article:nth-child(2) p').textContent = 'Hold demo shares and follow your simulated activity.';
-    $('#about-dialog').innerHTML = '<div class="dialog-heading"><h2>A solar ownership simulation.</h2><button type="button" aria-label="Close explanation" onclick="this.closest(\'dialog\').close()">×</button></div><p>Switch between Alice, Budi, and the operator. Buy shares, publish sample income, and claim your portion.</p><p>All money, shares, reports, and receipts are simulated. Your progress stays in this browser tab across reloads. It is not shared with other visitors.</p><p>Income does not increase the share price. Existing earnings stay with their owner when shares are transferred.</p><button type="button" class="secondary-button" id="reset-demo">Reset demo</button>';
-    $('#reset-demo').onclick = async () => {
-      try { simulation.reset(); await chooseWallet(1); $('#about-dialog').close(); toast('Demo reset. Everyone starts fresh.'); }
-      catch (error) { toast(errorMessage(error), true); }
-    };
-    await chooseWallet(1);
-    if (simulation.warning) toast(simulation.warning, true);
+    applyMode();
+    await chooseWallet(1, true);
+    if (simulation.warning) notify(new Error(simulation.warning), 'Demo restarted');
     return;
   }
   try {
     const response = await fetch(`${import.meta.env.BASE_URL}deployment.json`, { cache: 'no-store' });
     if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) throw new Error('Deployment configuration is missing.');
     deployment = await response.json();
-    if (![31337, 11155111].includes(deployment.chainId)) throw new Error('This app only supports local Ethereum or Sepolia.');
+    if (![31337, SEPOLIA].includes(deployment.chainId)) throw new Error('This app only supports local Ethereum or Sepolia.');
     const rpc = new URL(deployment.rpcUrl);
     if (!['http:', 'https:'].includes(rpc.protocol)) throw new Error('Invalid RPC URL.');
     if (deployment.chainId === 31337 && !['127.0.0.1', 'localhost'].includes(rpc.hostname)) throw new Error('Local development wallets require a loopback RPC.');
@@ -384,48 +940,31 @@ async function initialize() {
     deployment.operator = await contract.operator();
     safeguards = contract.interface.hasFunction('CONTRACT_VERSION') && Number(await contract.CONTRACT_VERSION()) === 2;
     if (deployment.chainId === 31337) accounts = (await provider.listAccounts()).slice(0, 3).map(account => account.address);
-    else {
-      document.querySelectorAll('[data-wallet]').forEach(button => { button.hidden = true; });
-      $('#wallet-dialog > p').textContent = 'Connect MetaMask on Sepolia. Purchases and claims use free test ETH.';
-      $('#browser-wallet').textContent = 'Connect MetaMask';
-      $('#wallet-button').textContent = 'Connect MetaMask ↗';
-      $('.demo-note').textContent = '✳ Sepolia testnet. Test ETH only. Real on-chain activity.';
-      $('.demo-explainer p').textContent = 'Energy reports are simulated. Share purchases, transfers, and income claims run on Ethereum Sepolia. No hardware or utilities are connected.';
-      $('#wallet-dialog .form-footnote').textContent = 'Eden operates the project. Jacob invests. Select your account in MetaMask, then connect.';
-    }
-    $('#network-badge').textContent = deployment.chainId === 31337 ? 'Local Ethereum' : 'Sepolia testnet';
-    $('#contract-caption').textContent = `${short(deployment.address)} · Chain ${deployment.chainId}`;
-    $('#contract-caption').hidden = false;
+    applyMode();
     await refresh();
   } catch (error) {
     state = null;
-    $('#connection-error').textContent = deployment?.chainId === 11155111
+    loadError = deployment?.chainId === SEPOLIA
       ? `Sepolia could not be reached. Reload to retry. ${errorMessage(error)}`
       : `Local demo is not connected. Run npm start in the SOL-INVICTUS project folder and keep it running, then open http://127.0.0.1:5173/. ${errorMessage(error)}`;
-    $('#connection-error').hidden = false;
-    updatePurchase();
+    render();
   }
 }
 await initialize();
-// Refresh safety status without replacing a report the operator is typing.
 let pollingReporting = false;
 const reportingTimer = setInterval(async () => {
-  if (!state?.safeguards || busy || pollingReporting) return;
+  if (!state?.safeguards || ui.busy || pollingReporting) return;
   pollingReporting = true;
   const previousState = state;
   try {
     const reporting = simulation ? simulation.snapshot(address) : await readReportingStatus();
-    if (state !== previousState || busy) return;
-    const periodChanged = state.nextReportingPeriod !== reporting.nextReportingPeriod;
+    if (state !== previousState || ui.busy) return;
     Object.assign(state, reporting);
-    if (periodChanged && $('#report-month')) {
-      $('#report-month').min = nextPeriod(); $('#report-month').max = nextPeriod(); $('#report-month').value = nextPeriod();
-    }
-    renderReporting(); updatePurchase(); updateReport();
+    renderReporting(); renderProject(); renderOperator();
   } catch {
-    if (state !== previousState || busy) return;
+    if (state !== previousState || ui.busy) return;
     state.statusUnavailable = true;
-    renderReporting(); updatePurchase(); updateReport();
+    renderReporting(); renderProject(); renderOperator();
   } finally { pollingReporting = false; }
 }, 15000);
 window.addEventListener('pagehide', () => clearInterval(reportingTimer), { once: true });
