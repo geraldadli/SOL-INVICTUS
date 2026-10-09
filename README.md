@@ -24,10 +24,10 @@ SuryaShare explicitly selects MetaMask through EIP-6963 discovery; other wallet 
 
 1. Select **Jacob** in MetaMask, open the website, and choose **Connect MetaMask**.
 2. Buy **100 shares** for **0.01 Sepolia ETH** plus gas. This represents Rp10,000,000 in demo units and 10% of the project.
-3. Switch MetaMask to **Eden**, then reconnect on the website. Open **Demo lab**.
+3. Switch to **Eden** with **Switch MetaMask account** in the wallet menu; the site follows the selected account. Open **Operator lab**, which appears in the navigation for the operator.
 4. Enter **4,000 kWh**, **Rp800,000 costs**, and **Rp200,000 reserve**, using a month later than the last published report. Publish and confirm the **0.005 Sepolia ETH** income deposit plus gas.
-5. Switch back to **Jacob**, reconnect, and open **My shares**. Claim **0.0005 Sepolia ETH**, shown as Rp500,000 in demo income. Gas is paid separately.
-6. Use **Refresh** to pick up transactions made by another account or through Remix. Receipts link to Sepolia Etherscan.
+5. Switch back to **Jacob** and open **My shares**. Claim **0.0005 Sepolia ETH**, shown as Rp500,000 in demo income. Gas is paid separately.
+6. The site checks for new activity every 30 seconds; use the **Refresh** icon on the Activity card to pick up transactions made by another account or through Remix right away. Receipts link to Sepolia Etherscan.
 
 Sending ETH directly to Jacob or to the earlier SmartWallet does not buy SURYA shares. Use this site's purchase action. The old SmartWallet is not part of this integration.
 
