@@ -309,61 +309,6 @@
               <div class="op-track-labels"><span id="op-track-open"></span><span id="op-track-due"></span></div>
             </div>
           </section>
-<<<<<<< HEAD
-          <div class="op-top">
-            <form id="report-form" class="card report-card" novalidate>
-              <h2>Monthly report</h2>
-              <div id="proof-controls" hidden>
-                <p id="report-opening-note" class="field-help" role="status" hidden></p>
-                <div id="local-report-clock" hidden>
-                  <button type="button" id="advance-local-report" class="btn btn-md btn-outline">Move demo to next reporting date</button>
-                  <p class="field-help">For the local demo only. Moves the test date forward so you can continue without waiting. Your demo shares and earned income stay the same.</p>
-                </div>
-                <button type="button" id="load-evidence" class="btn btn-md btn-outline" aria-describedby="report-opening-note evidence-note">Check monthly data</button>
-                <p id="evidence-note" class="field-help" role="status">First, check this month’s records. Then review the figures below and publish the report with the required payment.</p>
-                <button type="button" id="download-evidence" class="btn btn-md btn-outline" hidden>Download supporting records</button>
-              </div>
-              <label class="field-label" for="report-period">Reporting month</label>
-              <select id="report-period" class="input" aria-describedby="last-published-note"></select>
-              <div class="field-help field-help-small" id="last-published-note"></div>
-              <label class="field-label" for="report-kwh">Electricity generated</label>
-              <div class="input-wrap"><input id="report-kwh" class="input input-strong has-suffix" value="1265" inputmode="numeric" autocomplete="off" /><span class="input-suffix">kWh</span></div>
-              <div class="field-label" id="tariff-label">Price per kWh</div>
-              <div class="input-static" aria-labelledby="tariff-label"><span>Rp1,500 / kWh</span><small>Fixed in the contract</small></div>
-              <div class="field-pair">
-                <div><label class="field-label" for="report-costs">Operating costs</label><div class="input-wrap"><span class="input-prefix">Rp</span><input id="report-costs" class="input input-strong has-prefix" value="420000" inputmode="numeric" autocomplete="off" /></div></div>
-                <div><label class="field-label" for="report-reserve">Set aside for repairs</label><div class="input-wrap"><span class="input-prefix">Rp</span><input id="report-reserve" class="input input-strong has-prefix" value="250000" inputmode="numeric" autocomplete="off" /></div></div>
-              </div>
-            </form>
-            <div class="breakdown">
-              <h2>Breakdown</h2>
-              <div class="breakdown-rows">
-                <div class="breakdown-row"><span>Income from electricity<span class="breakdown-note" id="bd-receipts-note"></span></span><span class="mono" id="bd-receipts"></span></div>
-                <div class="breakdown-row"><span>− Operating costs</span><span class="mono" id="bd-costs"></span></div>
-                <div class="breakdown-row"><span>− Set aside for repairs</span><span class="mono" id="bd-reserve"></span></div>
-              </div>
-              <div class="breakdown-bar" aria-hidden="true"><span class="bar-costs" id="bar-costs"></span><span class="bar-reserve" id="bar-reserve"></span><span class="bar-dist" id="bar-dist"></span></div>
-              <div class="legend" aria-hidden="true"><span><i class="bar-costs"></i>Costs</span><span><i class="bar-reserve"></i>Reserve</span><span><i class="bar-dist"></i>To shareholders</span></div>
-              <div id="bd-ok">
-                <div class="dist"><div class="dist-label">Income to share</div><div class="dist-value" id="bd-dist"></div><div class="dist-note">Send <span id="bd-dist-eth"></span> when publishing this report</div></div>
-                <div class="per-share"><span>Per Sol Coin (÷ 1,000)</span><span><b id="bd-per-share"></b><small id="bd-per-share-eth"></small></span></div>
-              </div>
-              <div id="bd-bad" class="breakdown-error" aria-live="polite" hidden></div>
-              <p id="zero-income-note" class="field-help" hidden></p>
-              <div class="grow"></div>
-              <button type="submit" form="report-form" id="publish-button" class="btn btn-lg btn-sun">Publish report</button>
-            </div>
-          </div>
-          <div class="op-bottom">
-            <div class="card reports-card"><h2>Published reports</h2><div id="reports-table"></div></div>
-            <div class="card proceeds-card">
-              <h2>Sale proceeds</h2>
-              <p class="card-text" id="proceeds-note">Funding received from Sol Coin purchases.</p>
-              <a href="#milestones">View funding milestones</a>
-              <div class="proceeds-value" id="proceeds-rp">Rp0</div>
-              <div class="tile-note" id="proceeds-eth">0 test ETH</div>
-              <button type="button" id="withdraw-button" class="btn btn-md">Nothing to withdraw</button>
-=======
 
           <div class="op-grid">
             <div class="op-col">
@@ -371,6 +316,16 @@
                 <div class="card-head"><h2 id="report-title">Publish monthly report</h2><span class="op-hint" id="report-window-note"></span></div>
                 <div class="report-grid">
                   <form id="report-form" class="op-steps" novalidate>
+                    <div id="proof-controls" class="op-proof" hidden>
+                      <p id="report-opening-note" class="field-help" role="status" hidden></p>
+                      <div id="local-report-clock" hidden>
+                        <button type="button" id="advance-local-report" class="btn btn-sm btn-soft">Move demo to next reporting date</button>
+                        <p class="field-help field-help-small">For the local demo only. Moves the test date forward so you can continue without waiting. Your demo shares and earned income stay the same.</p>
+                      </div>
+                      <button type="button" id="load-evidence" class="btn btn-sm btn-outline" aria-describedby="report-opening-note evidence-note">Check monthly data</button>
+                      <p id="evidence-note" class="field-help field-help-small" role="status">First, check this month’s records. Then review the figures below and publish the report with the required payment.</p>
+                      <button type="button" id="download-evidence" class="btn btn-sm btn-soft" hidden>Download supporting records</button>
+                    </div>
                     <div class="op-step">
                       <div class="op-step-n" aria-hidden="true">1</div>
                       <div class="op-step-body">
@@ -381,17 +336,17 @@
                         <label class="field-label" for="report-kwh">Electricity generated</label>
                         <div class="input-wrap"><input id="report-kwh" class="input input-strong has-suffix" value="1265" inputmode="numeric" autocomplete="off" /><span class="input-suffix">kWh</span></div>
                         <div class="op-chips" id="kwh-chips" hidden aria-label="Quick fill"></div>
-                        <div class="field-label" id="tariff-label">Tariff</div>
+                        <div class="field-label" id="tariff-label">Price per kWh</div>
                         <div class="input-static" aria-labelledby="tariff-label"><span>Rp1,500 / kWh</span><small>Fixed in the contract</small></div>
                       </div>
                     </div>
                     <div class="op-step">
                       <div class="op-step-n" aria-hidden="true">2</div>
                       <div class="op-step-body">
-                        <div class="op-step-title">Costs &amp; reserve<small>Deducted before shareholders are paid.</small></div>
+                        <div class="op-step-title">Costs &amp; repairs<small>Deducted before shareholders are paid.</small></div>
                         <div class="field-pair">
                           <div><label class="field-label" for="report-costs">Operating costs</label><div class="input-wrap"><span class="input-prefix">Rp</span><input id="report-costs" class="input input-strong has-prefix" value="420000" inputmode="numeric" autocomplete="off" /></div></div>
-                          <div><label class="field-label" for="report-reserve">Maintenance reserve</label><div class="input-wrap"><span class="input-prefix">Rp</span><input id="report-reserve" class="input input-strong has-prefix" value="250000" inputmode="numeric" autocomplete="off" /></div></div>
+                          <div><label class="field-label" for="report-reserve">Set aside for repairs</label><div class="input-wrap"><span class="input-prefix">Rp</span><input id="report-reserve" class="input input-strong has-prefix" value="250000" inputmode="numeric" autocomplete="off" /></div></div>
                         </div>
                       </div>
                     </div>
@@ -403,12 +358,12 @@
                       <div class="st-donut" id="st-donut" style="--a:0%;--b:0%"><div class="st-donut-c"><b id="st-pct">0%</b><span>to holders</span></div></div>
                       <div class="st-legend">
                         <div><span><i class="sw-costs"></i>Costs</span><b id="bd-costs"></b></div>
-                        <div><span><i class="sw-reserve"></i>Reserve</span><b id="bd-reserve"></b></div>
+                        <div><span><i class="sw-reserve"></i>Repairs</span><b id="bd-reserve"></b></div>
                         <div><span><i class="sw-dist"></i>Holders</span><b id="bd-holders"></b></div>
                       </div>
                     </div>
                     <div id="bd-ok">
-                      <div class="st-big"><small>Amount to distribute</small><strong id="bd-dist"></strong><em>from <span id="bd-receipts"></span> electricity receipts (<span id="bd-receipts-note"></span>) · <span id="bd-dist-eth"></span> deposited with the report</em></div>
+                      <div class="st-big"><small>Income to share</small><strong id="bd-dist"></strong><em>from <span id="bd-receipts"></span> income from electricity (<span id="bd-receipts-note"></span>) · send <span id="bd-dist-eth"></span> when publishing this report</em></div>
                       <div class="st-per"><span>Per Sol Coin (÷ 1,000)</span><span><b id="bd-per-share"></b><small id="bd-per-share-eth"></small></span></div>
                     </div>
                     <div id="bd-bad" class="breakdown-error" aria-live="polite" hidden></div>
@@ -448,7 +403,8 @@
 
               <section class="card proceeds-card" aria-labelledby="proceeds-title">
                 <div class="card-head"><h2 id="proceeds-title">Sale proceeds</h2></div>
-                <p class="card-text">What investors paid for Sol Coins, held by the contract until you withdraw it.</p>
+                <p class="card-text" id="proceeds-note">Funding received from Sol Coin purchases.</p>
+                <a class="op-link" href="#milestones">View funding milestones</a>
                 <div class="proceeds-value" id="proceeds-rp">Rp0</div>
                 <div class="tile-note" id="proceeds-eth">0 test ETH</div>
                 <button type="button" id="withdraw-button" class="btn btn-sm btn-withdraw">Nothing to withdraw</button>
@@ -458,7 +414,6 @@
                 <div class="card-head"><h2 id="op-activity-title">Recent activity</h2></div>
                 <div id="op-feed"></div>
               </section>
->>>>>>> 12d590b (Updating: UI, Icons, and features refinement)
             </div>
           </div>
           <section id="operator-verification" class="card reporting-card" aria-live="polite"></section>

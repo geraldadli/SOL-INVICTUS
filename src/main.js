@@ -90,19 +90,15 @@ async function readReportingStatus() {
   return { safeguards: true, lastPeriod: Number(lastPeriod), nextReportingPeriod: Number(next), reportingOpensAt: Number(opens), reportDueAt: Number(due),
     purchasesPaused: paused, overdue, purchasesAllowed: allowed, timestamp: block.timestamp, statusUnavailable: false };
 }
+const reportSourceNote = () => verification.required ? verification.demo ? 'Monthly figures must pass an automatic check using sample data.' : 'Monthly figures must be approved by the data-checking service.' : 'Monthly figures are supplied by the operator.';
 function renderReporting() {
   const status = !state ? 'Loading reporting status…' : !state.safeguards ? 'Reporting protections unavailable on this contract'
     : state.statusUnavailable ? 'Reporting status unavailable — purchases disabled'
     : state.purchasesPaused && state.overdue ? 'Operator pause and overdue report'
     : state.purchasesPaused ? 'Purchases paused by operator' : state.overdue ? 'Report overdue — purchases blocked' : 'Reporting up to date';
-<<<<<<< HEAD
-  const sourceNote = verification.required ? verification.demo ? 'Monthly figures must pass an automatic check using sample data.' : 'Monthly figures must be approved by the data-checking service.' : 'Monthly figures are supplied by the operator.';
+  const sourceNote = reportSourceNote();
   const detail = state?.safeguards ? `<p>Last report: ${state.lastPeriod ? periodLabel(state.lastPeriod) : 'None yet'}. Next required: <strong>${periodLabel(state.nextReportingPeriod)}</strong>.</p><p>Reporting opens: ${utcDate(state.reportingOpensAt)}<br>Due by: ${utcDate(state.reportDueAt)}</p><p>Claims and transfers remain available. ${sourceNote}</p>` : '<p>Monthly deadlines and purchase pausing require a version 2 or later contract.</p>';
-  for (const id of ['reporting-status', 'operator-reporting-status']) $(`#${id}`).innerHTML = `<h2>${status}</h2>${detail}`;
-=======
-  const detail = state?.safeguards ? `<p>Last report: ${state.lastPeriod ? periodLabel(state.lastPeriod) : 'None yet'}. Next required: <strong>${periodLabel(state.nextReportingPeriod)}</strong>.</p><p>Reporting opens: ${utcDate(state.reportingOpensAt)}<br>Due by: ${utcDate(state.reportDueAt)}</p><p>Claims and transfers remain available. Reports are operator-supplied sample data.</p>` : '<p>Monthly deadlines and purchase pausing require a version 2 contract.</p>';
   $('#reporting-status').innerHTML = `<h2>${status}</h2>${detail}`;
->>>>>>> 12d590b (Updating: UI, Icons, and features refinement)
   $('#reporting-controls').hidden = !state?.safeguards;
   $('#simulation-clock').hidden = !simulation;
   const pauseSwitch = $('#pause-purchases');
@@ -485,8 +481,9 @@ function renderOperatorOverview(all) {
     ? `<defs><linearGradient id="op-sg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#E95C05" stop-opacity=".28" /><stop offset="1" stop-color="#E95C05" stop-opacity="0" /></linearGradient></defs><path d="M${xy.map(p => p.join(' ')).join(' L')} L120 30 L0 30Z" fill="url(#op-sg)" /><path d="M${xy.map(p => p.join(' ')).join(' L')}" fill="none" stroke="#E95C05" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />`
     : '<path d="M0 22 L120 22" fill="none" stroke="#E6C9B4" stroke-width="2" stroke-dasharray="3 5" stroke-linecap="round" vector-effect="non-scaling-stroke" />';
   $('#op-income-note').textContent = all.length ? `${plural(all.length, 'report')} · ${demoIdr(all.at(-1).deposited / 1000n)} per Sol Coin latest` : 'No reports published yet';
-  tween($('#op-held'), Number(s.proceeds) / 1e9, idr);
-  $('#op-held-note').textContent = s.proceeds > 0n ? `Ready to withdraw · ${eth(s.proceeds)}` : 'Nothing waiting';
+  const held = s.milestones?.held ?? s.proceeds, withdrawable = s.milestones?.available ?? s.proceeds;
+  tween($('#op-held'), Number(held) / 1e9, idr);
+  $('#op-held-note').textContent = s.milestones && held > withdrawable ? `${demoIdr(withdrawable)} withdrawable · rest awaits milestone approval` : withdrawable > 0n ? `Ready to withdraw · ${eth(withdrawable)}` : 'Nothing waiting';
 
   const [tone, label] = !s.safeguards ? ['muted', 'Not tracked'] : s.statusUnavailable ? ['bad', 'Unavailable']
     : s.overdue ? ['bad', 'Overdue'] : s.purchasesPaused ? ['warn', 'Paused'] : ['ok', 'On track'];
@@ -503,8 +500,8 @@ function renderOperatorOverview(all) {
   $('#operator-reporting-status').innerHTML = s.safeguards
     ? `<ol class="sched">${s.lastPeriod ? step('done', `${periodLabel(s.lastPeriod)} report`, 'Published and claimable', 'Done', '<svg class="icon" aria-hidden="true"><use href="#i-check" /></svg>') : ''}`
       + step(s.overdue ? 'late' : 'now', `${month} report`, s.overdue ? `${dayDelta(s.reportDueAt, s.timestamp)} overdue` : waiting ? `Opens in ${dayDelta(s.reportingOpensAt, s.timestamp)}` : `Open now · due in ${dayDelta(s.reportDueAt, s.timestamp)}`, utcDay(waiting ? s.reportingOpensAt : s.reportDueAt))
-      + step('', `${periodLabel(nextPeriod(s.nextReportingPeriod))} report`, 'Opens after the month ends', utcDay(utcMonthStart(nextPeriod(nextPeriod(s.nextReportingPeriod))))) + '</ol>'
-    : '<p class="card-text">Monthly deadlines and purchase pausing require a version 2 contract.</p>';
+      + step('', `${periodLabel(nextPeriod(s.nextReportingPeriod))} report`, 'Opens after the month ends', utcDay(utcMonthStart(nextPeriod(nextPeriod(s.nextReportingPeriod))))) + `</ol><p class="field-help field-help-small">${reportSourceNote()}</p>`
+    : '<p class="card-text">Monthly deadlines and purchase pausing require a version 2 or later contract.</p>';
   $('#purchase-state').textContent = s.purchasesPaused ? 'Purchases paused' : s.overdue ? 'Purchases blocked' : 'Accepting purchases';
   $('#purchase-state-note').textContent = s.purchasesPaused ? 'Paused by you. Claims still work.' : s.overdue ? 'Report overdue. Publish it to reopen sales.' : 'Investors can buy Sol Coins.';
 }
