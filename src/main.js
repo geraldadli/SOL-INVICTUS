@@ -564,6 +564,7 @@ function applyMode() {
 // Ownership ledger: one tile per Sol Coin on the project page
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const TOTAL = 1000, COLS = 40;
+const GLOW_FIRST_GAP = 160, GLOW_SPEEDUP = .92, GLOW_MS = 800; // ms between the first two glowing coins, gap multiplier per coin, one coin's glow
 const ledgerEl = $('#tiles'), tipEl = $('#tip');
 const tileEls = Array.from({ length: TOTAL }, () => document.createElement('i'));
 ledgerEl.append(...tileEls);
@@ -577,10 +578,12 @@ function renderLedger() {
     const kind = i < sold - mine ? 'sold' : i < sold ? 'mine' : i < sold + pick ? 'pick' : '';
     if (ledger.kinds[i] !== kind) { ledger.kinds[i] = kind; tileEls[i].className = kind; }
   }
-  for (let k = 0; k < fresh; k++) {
-    const tile = tileEls[sold - 1 - k];
-    tile.classList.add('fresh'); tile.style.animationDelay = `${Math.min(k * 7, 900)}ms`;
-    setTimeout(() => { tile.classList.remove('fresh'); tile.style.animationDelay = ''; }, 1600);
+  // Newly bought coins light up one after another, each gap shorter than the last, so the speed grows exponentially.
+  let delay = 0, gap = GLOW_FIRST_GAP;
+  for (let k = 0; k < fresh && !reduceMotion; k++, delay += gap, gap *= GLOW_SPEEDUP) {
+    const tile = tileEls[sold - fresh + k], wait = Math.round(delay);
+    tile.classList.add('fresh'); tile.style.animationDelay = `${wait}ms`;
+    setTimeout(() => { tile.classList.remove('fresh'); tile.style.animationDelay = ''; }, wait + GLOW_MS + 300);
   }
   const reportCount = reports().length;
   if (ledger.reports !== undefined && reportCount > ledger.reports) waveTiles();
@@ -928,11 +931,12 @@ async function loadBlockTimes(logs) {
 function manualRefresh() {
   refresh().then(() => info('Up to date', simulation ? 'Demo state reloaded.' : `Latest activity loaded from ${networkLabel()}.`)).catch(error => notify(error, "Couldn't refresh"));
 }
-async function transact(key, title, action, success) {
+async function transact(key, title, action, success, onConfirmed) {
   if (ui.busy) return false;
   if (simulation) {
     try {
       await action(simulation.forAccount(address));
+      onConfirmed?.();
       await refresh();
       dismissLater(pushToast({ status: 'confirmed', title, body: success() }), 9000);
       return true;
@@ -957,6 +961,7 @@ async function transact(key, title, action, success) {
     const receipt = await tx.wait();
     if (receipt.status !== 1) throw new Error('The transaction reverted.');
     ui.busy = null;
+    onConfirmed?.();
     try { await refresh(); patchToast(id, { status: 'confirmed', body: success() }); }
     catch { patchToast(id, { status: 'confirmed', body: 'Confirmed, but the page could not refresh. Use Refresh to load the latest state.' }); }
     dismissLater(id, 9000);
@@ -1149,7 +1154,8 @@ $('#buy-form').onsubmit = event => {
   if (state.safeguards && (!state.purchasesAllowed || state.statusUnavailable)) return;
   if (isOperator() || q < 1 || q > state.available) return;
   transact('buy', `Buy ${plural(q, 'Sol Coin')}`, c => c.buyShares(q, { value: BigInt(q) * SHARE_PRICE }),
-    () => `You now own ${plural(state.balance, 'Sol Coin')}, ${pct(state.balance)} of the project.`);
+    () => `You now own ${plural(state.balance, 'Sol Coin')}, ${pct(state.balance)} of the project.`,
+    () => { ui.qty = ''; $('#qty').value = ''; }); // the bought coins are no longer a selection
 };
 $('#claim-button').onclick = () => {
   if (wrongNetwork()) { openModal('wrong'); return; }
