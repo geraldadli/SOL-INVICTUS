@@ -27,6 +27,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: npm test
       - run: node --test tests/wallet-network.test.mjs
       - run: node --test tests/metamask.test.mjs
       - run: npm run test:simulation

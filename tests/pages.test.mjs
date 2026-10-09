@@ -14,13 +14,20 @@ test('Pages connects to the verified Sepolia deployment without publishing deplo
     }
   }
   const deployment = JSON.parse(readFileSync('dist/deployment.json', 'utf8'));
+  const configured = JSON.parse(readFileSync('deployments/sepolia.json', 'utf8'));
+  assert.deepEqual(deployment, configured, 'Pages must publish the selected public deployment, not the local chain.');
   assert.equal(deployment.chainId, 11155111);
-  assert.equal(deployment.address, '0xBB3a9F81461aF1BF2FaD7c90A8D95FC3acca6065');
-  assert.equal(deployment.operator, '0xaeEeC36568e5919ce3126ABde04285B90030F58b');
+  assert.match(deployment.address, /^0x[\da-f]{40}$/i);
+  assert.match(deployment.operator, /^0x[\da-f]{40}$/i);
   assert.equal(new URL(deployment.rpcUrl).protocol, 'https:');
-  assert.equal(deployment.blockNumber, 11875135);
+  assert.ok(Number.isSafeInteger(deployment.blockNumber) && deployment.blockNumber > 0);
   for (const name of ['buyShares', 'publishReport', 'claimRevenue']) {
     assert.ok(deployment.abi.some(item => item.type === 'function' && item.name === name));
+  }
+  if (deployment.contractVersion === 2) {
+    for (const name of ['CONTRACT_VERSION', 'reportingStatus', 'setPurchasesPaused', 'purchasesAllowed']) {
+      assert.ok(deployment.abi.some(item => item.type === 'function' && item.name === name));
+    }
   }
   assert.equal(existsSync('dist/deploy.html'), false);
   const invalid = spawnSync(process.execPath, ['scripts/connect-sepolia.mjs', 'not-a-transaction'], { encoding: 'utf8' });

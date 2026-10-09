@@ -13,7 +13,7 @@ const contract = await new ContractFactory(artifact.abi, artifact.bytecode, sign
 await contract.waitForDeployment();
 const receipt = await contract.deploymentTransaction().wait();
 const deployment = {
-  address: await contract.getAddress(), operator: await signer.getAddress(), chainId: Number(chainId),
+  address: await contract.getAddress(), operator: await contract.operator(), contractVersion: Number(await contract.CONTRACT_VERSION()), chainId: Number(chainId),
   rpcUrl: chainId === 31337n ? rpcUrl : process.env.PUBLIC_RPC_URL,
   blockNumber: receipt.blockNumber, abi: artifact.abi,
 };

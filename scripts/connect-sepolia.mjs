@@ -16,8 +16,8 @@ try {
   if (tx.data.toLowerCase() !== artifact.bytecode.toLowerCase()) throw new Error('This transaction did not deploy the current SuryaShare contract.');
   const contract = new Contract(receipt.contractAddress, artifact.abi, provider);
   const operator = await contract.operator();
-  if (operator.toLowerCase() !== receipt.from.toLowerCase() || await contract.totalSupply() !== 1000n) throw new Error('Contract verification failed.');
-  const config = { address: receipt.contractAddress, operator, chainId: 11155111, rpcUrl, blockNumber: receipt.blockNumber, abi: artifact.abi };
+  if (operator.toLowerCase() !== receipt.from.toLowerCase() || await contract.totalSupply() !== 1000n || await contract.CONTRACT_VERSION() !== 2n) throw new Error('Contract verification failed.');
+  const config = { address: receipt.contractAddress, operator, contractVersion: 2, chainId: 11155111, rpcUrl, blockNumber: receipt.blockNumber, deploymentTransaction: hash, abi: artifact.abi };
   mkdirSync('deployments', { recursive: true });
   writeFileSync('deployments/sepolia.json', JSON.stringify(config, null, 2) + '\n');
   console.log(`Verified ${config.address}. Operator: ${operator}. Commit deployments/sepolia.json and push to connect Pages.`);

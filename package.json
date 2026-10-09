@@ -9,7 +9,7 @@
     "chain": "hardhat node --hostname 127.0.0.1",
     "compile": "node scripts/compile.mjs",
     "deploy": "node scripts/deploy.mjs",
-    "test": "node --test tests/contract.test.mjs",
+    "test": "node scripts/test-contracts.mjs",
     "test:pages": "node --test tests/pages.test.mjs",
     "test:simulation": "node --test tests/simulation.test.mjs",
     "demo": "vite --mode simulation --host 127.0.0.1 --port 5173 --strictPort",

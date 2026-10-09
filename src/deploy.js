@@ -4,7 +4,7 @@ import { getMetaMaskProvider } from './metamask.js';
 import artifact from '../artifacts/SuryaShare.json';
 
 const $ = selector => document.querySelector(selector);
-const pendingKey = 'suryashare.sepolia.deployment';
+const pendingKey = 'suryashare.sepolia.deployment.v2';
 let signer;
 const message = error => error.code === 'ACTION_REJECTED' || error.code === 4001
   ? 'Cancelled in your wallet. No deployment was submitted.'

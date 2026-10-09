@@ -1,6 +1,7 @@
 import { createSimulation, demoAccounts } from './simulation.js';
 import { ensureWalletNetwork } from './wallet-network.js';
 import { getMetaMaskProvider } from './metamask.js';
+import { reportAmounts, utcPeriod } from './reporting.js';
 import { BrowserProvider, Contract, JsonRpcProvider, ZeroAddress, formatEther, isAddress } from 'ethers';
 
 const $ = (selector) => document.querySelector(selector);
@@ -11,12 +12,13 @@ const demoIdr = wei => idr(Number(wei) / 1e9);
 const short = address => `${address.slice(0, 6)}…${address.slice(-4)}`;
 const esc = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 let deployment, provider, contract, signer, address, walletName, accounts = [], state, busy = false, toastTimer;
-let walletProvider, connecting = false;
+let walletProvider, connecting = false, safeguards = false;
 const labels = ['Solar operator', 'Alice', 'Budi'];
 const isOperator = () => Boolean(address && deployment && address.toLowerCase() === deployment.operator.toLowerCase());
 const periodLabel = period => { const s = String(period); return new Date(Number(s.slice(0, 4)), Number(s.slice(4)) - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); };
 const nextPeriod = () => {
-  if (!state?.lastPeriod) return '2026-10';
+  if (state?.safeguards) return `${Math.floor(state.nextReportingPeriod / 100)}-${String(state.nextReportingPeriod % 100).padStart(2, '0')}`;
+  if (!state?.lastPeriod) { const period = utcPeriod(Date.now() / 1000); return `${Math.floor(period / 100)}-${String(period % 100).padStart(2, '0')}`; }
   const year = Math.floor(state.lastPeriod / 100), month = state.lastPeriod % 100;
   return `${month === 12 ? year + 1 : year}-${String(month === 12 ? 1 : month + 1).padStart(2, '0')}`;
 };
@@ -57,17 +59,49 @@ function updatePurchase() {
   $('#buy-button').textContent = busy ? 'Confirming transaction…' : (!simulation && !contract) || !state ? 'Blockchain unavailable' : !address ? 'Connect wallet →' : isOperator() ? 'Switch to an investor wallet' : state.available === 0 ? 'All shares purchased' : 'Buy demo shares →';
   $('#buy-button').disabled = busy || (!simulation && !contract) || !state || !valid || isOperator();
   $('#purchase-footnote').textContent = simulation ? `Demo balance: ${idr(state?.cash ?? 0)} · No real money` : address ? `${walletName} · Test ETH + network fee` : 'Test ETH only. No real money.';
+  if (state?.safeguards && (!state.purchasesAllowed || state.statusUnavailable)) {
+    $('#buy-button').disabled = true;
+    $('#buy-button').textContent = state.statusUnavailable ? 'Reporting status unavailable' : state.purchasesPaused ? 'Purchases paused by operator' : 'Purchases paused: report overdue';
+    $('#purchase-footnote').textContent = 'Existing shares can still be transferred and deposited income can still be claimed.';
+  }
+}
+const utcDate = timestamp => `${new Date(timestamp * 1000).toLocaleString('en-GB', { timeZone: 'UTC' })} UTC`;
+function reportingHTML() {
+  if (!state) return '<p>Loading reporting status…</p>';
+  if (!state.safeguards) return '<p>This contract does not support reporting deadlines or purchase pausing. These protections require the new contract deployment.</p>';
+  const status = state.statusUnavailable ? 'Reporting status unavailable — purchases disabled in this app' : state.purchasesPaused && state.overdue ? 'Operator pause and overdue report' : state.purchasesPaused ? 'Purchases paused by operator' : state.overdue ? 'Report overdue — purchases blocked' : 'Purchases open';
+  return `<h3>${status}</h3><p>Last report: ${state.lastPeriod ? periodLabel(state.lastPeriod) : 'None yet'}. Next required: <strong>${periodLabel(state.nextReportingPeriod)}</strong>.</p><p>Reporting opens: ${utcDate(state.reportingOpensAt)}<br>Due by: ${utcDate(state.reportDueAt)}</p><p>Claims and transfers remain available. Reports are operator-supplied sample data.</p>`;
+}
+function renderReporting() {
+  if ($('#reporting-status')) $('#reporting-status').innerHTML = reportingHTML();
+  if (!$('#operator-reporting')) return;
+  $('#operator-reporting').innerHTML = `${reportingHTML()}${deployment?.operator ? `<p>Operator: <span class="receipt-value">${esc(deployment.operator)}</span></p>` : ''}${state?.safeguards ? `<button type="button" class="secondary-button" data-write id="pause-purchases" ${!isOperator() || busy || state.statusUnavailable ? 'disabled' : ''}>${state.purchasesPaused ? 'Remove manual purchase pause' : 'Pause purchases'}</button><p>Removing a manual pause cannot reopen purchases while reporting is overdue. Wallet recovery is not available.</p>${simulation ? '<p>Simulation clock controls affect this browser demo only.</p><button type="button" class="text-button" id="advance-report-clock">Advance to next report opening →</button><button type="button" class="text-button" id="advance-overdue-clock">Advance past reporting deadline →</button>' : ''}` : ''}`;
+  if ($('#pause-purchases')) $('#pause-purchases').onclick = () => transact(c => c.setPurchasesPaused(!state.purchasesPaused), state.purchasesPaused ? 'Manual pause removed. Overdue reporting still blocks purchases.' : 'Purchases paused. Claims and transfers remain available.');
+  const advance = async target => { try { if (target > simulation.snapshot(address).timestamp) simulation.advanceTo(target); await refresh(); } catch (error) { toast(errorMessage(error), true); } };
+  if ($('#advance-report-clock')) $('#advance-report-clock').onclick = () => advance(state.reportingOpensAt);
+  if ($('#advance-overdue-clock')) $('#advance-overdue-clock').onclick = () => advance(state.reportDueAt + 1);
+}
+async function readReportingStatus() {
+  if (!safeguards) return { safeguards: false };
+  const block = await provider.getBlock('latest');
+  if (!block) throw new Error('Latest block is unavailable.');
+  const [[next, opens, due, paused, overdue, allowed], lastPeriod] = await Promise.all([
+    contract.reportingStatus({ blockTag: block.number }), contract.lastPeriod({ blockTag: block.number }),
+  ]);
+  return { safeguards: true, lastPeriod: Number(lastPeriod), nextReportingPeriod: Number(next), reportingOpensAt: Number(opens), reportDueAt: Number(due),
+    purchasesPaused: paused, overdue, purchasesAllowed: allowed, timestamp: block.timestamp, statusUnavailable: false };
 }
 function activityHTML(logs) {
   if (!logs.length) return '<div class="empty-state">The first share starts the story. Purchase demo shares to begin.</div>';
   return logs.slice(-8).reverse().map(log => {
     const a = log.args;
     const title = log.name === 'SharesPurchased' ? `${nameFor(a.buyer)} purchased ${a.shares} shares`
-      : log.name === 'ReportPublished' ? `${periodLabel(a.period)} income deposited`
+      : log.name === 'ReportPublished' ? `${periodLabel(a.period)} report published`
+      : log.name === 'PurchasesPauseChanged' ? (a.paused ? 'Operator paused purchases' : 'Operator removed manual pause')
       : log.name === 'RevenueClaimed' ? `${nameFor(a.holder)} claimed income`
       : log.name === 'Transfer' ? `${nameFor(a.from)} transferred ${a.value} shares to ${nameFor(a.to)}`
       : 'Operator withdrew purchase proceeds';
-    const value = log.name === 'SharesPurchased' ? demoIdr(a.paid) : log.name === 'ReportPublished' ? demoIdr(a.deposited) : log.name === 'Transfer' ? `${a.value} SURYA` : demoIdr(a.amount);
+    const value = log.name === 'PurchasesPauseChanged' ? 'Claims and transfers remain available' : log.name === 'SharesPurchased' ? demoIdr(a.paid) : log.name === 'ReportPublished' ? demoIdr(a.deposited) : log.name === 'Transfer' ? `${a.value} SURYA` : demoIdr(a.amount);
     return `<div class="activity-row"><span class="activity-icon" aria-hidden="true">${log.name === 'ReportPublished' ? '☀' : '↗'}</span><div><strong>${esc(title)}</strong><p>${simulation ? 'Demo step' : 'Block'} ${log.blockNumber} · ${esc(value)}</p></div><button class="text-button" type="button" data-receipt="${log.transactionHash}">Receipt ↗</button></div>`;
   }).join('');
 }
@@ -100,7 +134,8 @@ function renderPortfolio() {
 function renderOperator() {
   $('#operator-page').innerHTML = `<div class="page-heading"><div><div class="eyebrow">THE DEMO LAB</div><h1>Make sunshine move.</h1><p>Simulate a month. Fund a payout. Watch your shares work.</p></div><span class="outline-tag">OPERATOR ONLY</span></div>
     ${!isOperator() ? '<div class="notice">Switch to the operator to run the demo. <button class="text-button" type="button" data-choose-wallet>Choose the operator wallet →</button></div>' : ''}
-    <div class="operator-grid" style="margin-top:22px"><article class="card"><div class="section-heading"><h3>Simulate an energy report</h3><span class="small-tag">SIMULATED DATA</span></div><p>Sample data. No solar hardware connected.</p><form id="report-form" class="operator-form"><div class="field"><label for="report-month">Reporting month</label><input id="report-month" type="month" min="${nextPeriod()}" max="2100-12" value="${nextPeriod()}" required /></div><div class="field"><label for="generation">Electricity generated (kWh)</label><input id="generation" type="number" min="1" max="1000000" step="1" value="1200" required /></div><div class="field"><label for="operating-costs">Operating costs (demo IDR)</label><input id="operating-costs" type="number" min="0" max="1500000000" step="1" value="400000" required /></div><div class="field"><label for="reserve">Maintenance reserve (demo IDR)</label><input id="reserve" type="number" min="0" max="1500000000" step="1" value="200000" required /></div><div class="full-width"><div class="notice">Demo tariff: Rp1,500 / kWh.</div><button type="submit" id="publish-button" data-write class="primary-button" style="margin-top:20px" ${!isOperator() || busy ? 'disabled' : ''}>Publish report & deposit income →</button><p class="form-footnote">${simulation ? 'One report per month. Uses your demo balance.' : 'One report per month. Paid in test ETH.'}</p></div></form></article>
+    <article class="card" id="operator-reporting" aria-live="polite"></article>
+    <div class="operator-grid" style="margin-top:22px"><article class="card"><div class="section-heading"><h3>Simulate an energy report</h3><span class="small-tag">SIMULATED DATA</span></div><p>Sample data. No solar hardware connected.</p><form id="report-form" class="operator-form"><div class="field"><label for="report-month">Reporting month</label><input id="report-month" type="month" min="${nextPeriod()}" max="${state?.safeguards ? nextPeriod() : '2100-12'}" value="${nextPeriod()}" required /></div><div class="field"><label for="generation">Electricity generated (kWh)</label><input id="generation" type="number" min="${state?.safeguards ? 0 : 1}" max="1000000" step="1" value="1200" required /></div><div class="field"><label for="operating-costs">Operating costs (demo IDR)</label><input id="operating-costs" type="number" min="0" max="1500000000" step="1" value="400000" required /></div><div class="field"><label for="reserve">Maintenance reserve (demo IDR)</label><input id="reserve" type="number" min="0" max="1500000000" step="1" value="200000" required /></div><div class="full-width"><div class="notice">Demo tariff: Rp1,500 / kWh.</div><button type="submit" id="publish-button" data-write class="primary-button" style="margin-top:20px" ${!isOperator() || busy ? 'disabled' : ''}>Publish report & deposit income →</button><p class="form-footnote">${state?.safeguards ? 'Report each completed UTC month in order. Zero-income reports require no deposit.' : 'One report per month. Paid in test ETH.'}</p></div></form></article>
     <article class="card"><h3>Where the income goes</h3><div id="report-calculation"></div><p>Each share earns 1/1,000 of the deposit. Unsold shares belong to the operator.</p></article></div>
     <article class="card activity-card"><div class="section-heading"><div><h3>Published reports</h3><p>${simulation ? 'Simulated reports and deposits.' : 'Sample reports. Verifiable deposits.'}</p></div></div>${reportTable()}</article>
     <article class="card activity-card"><div class="section-heading"><div><h3>Purchase proceeds</h3><p>${demoIdr(state?.proceeds ?? 0n)} available. Holder income stays protected.</p></div><button type="button" id="withdraw-button" data-write class="secondary-button" ${!isOperator() || !state?.proceeds || busy ? 'disabled' : ''}>Withdraw proceeds</button></div></article>`;
@@ -113,6 +148,7 @@ function renderOperator() {
     } catch (error) { toast(errorMessage(error), true); }
   };
   $('#withdraw-button').onclick = () => transact(c => c.withdrawSaleProceeds(), 'Purchase proceeds withdrawn. Holder income remains reserved.');
+  renderReporting();
   updateReport();
 }
 function readReport() {
@@ -120,18 +156,24 @@ function readReport() {
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new Error('Choose a valid reporting month.');
   const period = Number(month.replace('-', ''));
   if (period < 200001 || period > 210012 || period <= (state?.lastPeriod ?? 0)) throw new Error('Choose a month after the latest published report.');
-  const kwh = integer($('#generation').value, 1, 1000000, 'Generation');
+  if (state?.safeguards) {
+    if (state.statusUnavailable) throw new Error('Refresh reporting status before publishing.');
+    if (period !== state.nextReportingPeriod) throw new Error('Report the next required month, without skipping any months.');
+    if (state.timestamp < state.reportingOpensAt) throw new Error(`This month is still in progress. Reporting opens ${utcDate(state.reportingOpensAt)}.`);
+  }
+  const kwh = integer($('#generation').value, state?.safeguards ? 0 : 1, 1000000, 'Generation');
   const costs = integer($('#operating-costs').value, 0, 1500000000, 'Operating costs');
   const reserve = integer($('#reserve').value, 0, 1500000000, 'Maintenance reserve');
-  const gross = kwh * 1500, net = gross - costs - reserve;
-  if (net <= 0) throw new Error('Costs and reserves must leave a positive amount to distribute.');
-  return { period, kwh, costs, reserve, gross, net };
+  const { gross, net, loss } = reportAmounts(kwh, costs, reserve);
+  if (!state?.safeguards && net <= 0) throw new Error('This older contract requires positive distributable income.');
+  return { period, kwh, costs, reserve, gross, net, loss };
 }
 function updateReport() {
   try {
     const r = readReport();
     $('#report-calculation').innerHTML = `<div class="calculation"><div class="order-row"><span>Electricity receipts</span><strong>${idr(r.gross)}</strong></div><div class="order-row"><span>Operating costs</span><strong>− ${idr(r.costs)}</strong></div><div class="order-row"><span>Maintenance reserve</span><strong>− ${idr(r.reserve)}</strong></div><div class="order-row total"><span>To distribute</span><strong>${idr(r.net)}</strong></div></div><div class="calculation"><div class="order-row"><span>Per ownership unit</span><strong>${idr(r.net / 1000)}</strong></div><div class="order-row"><span>100 shares receive</span><strong>${idr(r.net / 10)}</strong></div><div class="order-row"><span>${simulation ? 'Operator demo balance' : 'Test ETH deposit'}</span><strong>${simulation ? idr(state?.cash ?? 0) : formatEther(BigInt(r.net) * 1000000000n)}</strong></div></div>`;
     $('#publish-button').disabled = busy || !isOperator() || !state;
+    if (r.net === 0) $('#report-calculation').insertAdjacentHTML('beforeend', `<p>Zero-income report: no deposit is required.${r.loss ? ` Shortfall after costs and reserves: ${idr(r.loss)}. This is recorded without creating holder debt or carrying losses into later reports.` : ''}</p>`);
   } catch (error) {
     $('#report-calculation').innerHTML = `<div class="notice error">${esc(errorMessage(error))}</div>`;
     $('#publish-button').disabled = true;
@@ -140,7 +182,7 @@ function updateReport() {
 function reportTable() {
   const reports = (state?.logs ?? []).filter(log => log.name === 'ReportPublished').reverse();
   if (!reports.length) return '<div class="empty-state">Publish a month to start the income demo.</div>';
-  return `<div class="table-scroll"><table class="report-table"><thead><tr><th>Period</th><th>Generation</th><th>Distributable</th><th>Per share</th><th>Proof</th></tr></thead><tbody>${reports.map(log => `<tr><td>${periodLabel(log.args.period)}</td><td>${log.args.kwh} kWh</td><td>${demoIdr(log.args.deposited)}</td><td>${demoIdr(log.args.deposited / 1000n)}</td><td><button type="button" class="text-button" data-receipt="${log.transactionHash}">Receipt ↗</button></td></tr>`).join('')}</tbody></table></div>`;
+  return `<div class="table-scroll"><table class="report-table"><thead><tr><th>Period</th><th>Generation</th><th>Costs</th><th>Reserve</th><th>Distributable</th><th>Per share</th><th>Proof</th></tr></thead><tbody>${reports.map(log => `<tr><td>${periodLabel(log.args.period)}</td><td>${log.args.kwh} kWh</td><td>${idr(log.args.costsIdr)}</td><td>${idr(log.args.reserveIdr)}</td><td>${demoIdr(log.args.deposited)}</td><td>${demoIdr(log.args.deposited / 1000n)}</td><td><button type="button" class="text-button" data-receipt="${log.transactionHash}">Receipt ↗</button></td></tr>`).join('')}</tbody></table></div>`;
 }
 async function refresh() {
   if (!contract && !simulation) return;
@@ -151,17 +193,18 @@ async function refresh() {
     operatorBalance = state.operatorBalance;
   } else {
   // ponytail: scan this single demo contract's history; use incremental indexing for long-lived projects.
-  const [available, revenue, lastPeriod, proceeds, operatorShares, balance, claimable, claimed, rawLogs] = await Promise.all([
+  const [available, revenue, lastPeriod, proceeds, operatorShares, balance, claimable, claimed, rawLogs, reporting] = await Promise.all([
     contract.availableShares(), contract.totalRevenue(), contract.lastPeriod(), contract.saleProceeds(), contract.balanceOf(deployment.operator),
     currentAddress ? contract.balanceOf(currentAddress) : 0n, currentAddress ? contract.claimable(currentAddress) : 0n,
     currentAddress ? contract.totalClaimed(currentAddress) : 0n,
     provider.getLogs({ address: deployment.address, fromBlock: deployment.blockNumber, toBlock: 'latest' }),
+    readReportingStatus(),
   ]);
   if (currentAddress !== address) return;
   const parsed = rawLogs.map(log => ({ ...log, ...contract.interface.parseLog(log) }));
   const purchases = new Set(parsed.filter(log => log.name === 'SharesPurchased').map(log => log.transactionHash));
   const logs = parsed.filter(log => log.name === 'Transfer' ? log.args.from !== ZeroAddress && !purchases.has(log.transactionHash) : log.name !== 'Approval');
-  state = { available: Number(available), revenue, lastPeriod: Number(lastPeriod), proceeds, balance: Number(balance), claimable, claimed, logs };
+  state = { ...reporting, available: Number(available), revenue, lastPeriod: Number(lastPeriod), proceeds, balance: Number(balance), claimable, claimed, logs };
     operatorBalance = operatorShares;
   }
   const { revenue, logs } = state;
@@ -338,6 +381,8 @@ async function initialize() {
     if ((await provider.getNetwork()).chainId !== BigInt(deployment.chainId)) throw new Error('Deployment network does not match the node.');
     if (await provider.getCode(deployment.address) === '0x') throw new Error('The node restarted. Run npm run deploy to create a new demo contract.');
     contract = new Contract(deployment.address, deployment.abi, provider);
+    deployment.operator = await contract.operator();
+    safeguards = contract.interface.hasFunction('CONTRACT_VERSION') && Number(await contract.CONTRACT_VERSION()) === 2;
     if (deployment.chainId === 31337) accounts = (await provider.listAccounts()).slice(0, 3).map(account => account.address);
     else {
       document.querySelectorAll('[data-wallet]').forEach(button => { button.hidden = true; });
@@ -356,12 +401,34 @@ async function initialize() {
     state = null;
     $('#connection-error').textContent = deployment?.chainId === 11155111
       ? `Sepolia could not be reached. Reload to retry. ${errorMessage(error)}`
-      : `Local demo is not connected. Run npm start in the SuryaShare folder, then reload. ${errorMessage(error)}`;
+      : `Local demo is not connected. Run npm start in the SOL-INVICTUS project folder and keep it running, then open http://127.0.0.1:5173/. ${errorMessage(error)}`;
     $('#connection-error').hidden = false;
     updatePurchase();
   }
 }
 await initialize();
+// Refresh safety status without replacing a report the operator is typing.
+let pollingReporting = false;
+const reportingTimer = setInterval(async () => {
+  if (!state?.safeguards || busy || pollingReporting) return;
+  pollingReporting = true;
+  const previousState = state;
+  try {
+    const reporting = simulation ? simulation.snapshot(address) : await readReportingStatus();
+    if (state !== previousState || busy) return;
+    const periodChanged = state.nextReportingPeriod !== reporting.nextReportingPeriod;
+    Object.assign(state, reporting);
+    if (periodChanged && $('#report-month')) {
+      $('#report-month').min = nextPeriod(); $('#report-month').max = nextPeriod(); $('#report-month').value = nextPeriod();
+    }
+    renderReporting(); updatePurchase(); updateReport();
+  } catch {
+    if (state !== previousState || busy) return;
+    state.statusUnavailable = true;
+    renderReporting(); updatePurchase(); updateReport();
+  } finally { pollingReporting = false; }
+}, 15000);
+window.addEventListener('pagehide', () => clearInterval(reportingTimer), { once: true });
 // Optional browser agent access uses the same loaded chain state as the visible interface.
 if (!simulationMode && document.modelContext?.registerTool) {
   const lifecycle = new AbortController();
