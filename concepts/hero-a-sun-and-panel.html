@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sol Invictus — Hero A: Sun and Panel</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Young+Serif&display=swap" />
+<style>
+:root{--cream:#FFF4E4;--ink:#2B0A12;--ink-soft:#5A1E22;--muted:#7A2E2A;--maroon:#83092D;--maroon-deep:#6E0726;--orange:#E95C05;--sun:#FABD3D;--sunset:linear-gradient(135deg,#FABD3D,#F59A2B 55%,#E95C05);--serif:'Young Serif',Georgia,serif;--sans:'Plus Jakarta Sans',system-ui,sans-serif;--gutter:clamp(16px,4vw,56px);--k:.5}
+*{box-sizing:border-box}html{scrollbar-width:none}html::-webkit-scrollbar{display:none}
+body{margin:0;min-height:100vh;color:var(--ink);font:400 16px/1.55 var(--sans);-webkit-font-smoothing:antialiased;background:radial-gradient(60% 50% at 88% 0%,rgba(250,189,61,.42),transparent 70%),linear-gradient(180deg,#F7C493,#FAD5B0 28%,#FDE6CC 62%,#FFF4E4)}
+h1,p{margin:0}
+header{height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 var(--gutter)}
+.brand{font:400 22px var(--serif)}.pill{background:#fff;border-radius:99px;padding:9px 18px;font-weight:700;font-size:14px}
+.hero{max-width:1300px;margin:0 auto;padding:0 var(--gutter);min-height:calc(100vh - 72px);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:40px;align-items:center}
+.kicker{font-size:15px;font-weight:600;color:var(--muted)}
+h1{font:400 clamp(42px,5.6vw,82px)/1.02 var(--serif);letter-spacing:-.02em;margin:14px 0 20px;color:var(--maroon-deep)}
+h1 em{font-style:normal;background:var(--sunset);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lede{font-size:18px;font-weight:500;max-width:28em;color:var(--ink-soft)}
+.btn{display:inline-block;margin-top:28px;border-radius:99px;padding:16px 30px;font:800 16px var(--sans);background:var(--maroon);color:var(--cream);text-decoration:none}
+/* the whole illustration is one sun and one panel */
+.art{position:relative;aspect-ratio:1/.9;max-width:640px;justify-self:center;width:100%}
+.sun{position:absolute;width:46%;aspect-ratio:1;border-radius:50%;left:calc(8% + var(--k)*34%);top:calc(14% - var(--k)*4%);
+  background:linear-gradient(rgba(255,244,228,.7) 0 2px,transparent 2px) 0 0/100% 12.5%,linear-gradient(90deg,rgba(255,244,228,.7) 0 2px,transparent 2px) 0 0/12.5% 100%,linear-gradient(180deg,#FFE29A,#FABD3D 30%,#E95C05 62%,#C8203C 86%,#83092D);
+  box-shadow:0 0 0 8px rgba(255,244,228,.9),0 0 90px 20px rgba(250,189,61,.55);transition:left .25s ease-out}
+.panel{position:absolute;left:6%;right:6%;bottom:2%;height:52%;border-radius:22px;padding:14px;background:linear-gradient(135deg,#e6d3c8,#a98a80 55%,#d9c4b8);box-shadow:0 40px 60px -30px rgba(80,10,30,.7);transform:perspective(1100px) rotateX(24deg);transform-origin:50% 100%}
+.glass{position:relative;height:100%;border-radius:12px;overflow:hidden;background-color:#3a1226;background-image:linear-gradient(rgba(255,255,255,.12) 1.5px,transparent 1.5px),linear-gradient(90deg,rgba(255,255,255,.12) 1.5px,transparent 1.5px),linear-gradient(135deg,#4a1328,#240810);background-size:100% 33.33%,16.666% 100%,auto}
+.glass::after{content:'';position:absolute;inset:0;background:linear-gradient(105deg,transparent calc(var(--k)*100% - 26%),rgba(255,226,150,.5) calc(var(--k)*100%),transparent calc(var(--k)*100% + 26%));transition:background .25s ease-out}
+@media(max-width:900px){.hero{grid-template-columns:1fr;padding-top:24px}}
+</style>
+</head>
+<body>
+<header><span class="brand">Sol Invictus</span><span class="pill">Connect wallet</span></header>
+<main class="hero" id="hero">
+  <div>
+    <div class="kicker">Cikarang Rooftop Solar · West Java</div>
+    <h1>Own the <em>sunshine.</em> Share the future.</h1>
+    <p class="lede">Buy Sol Coins of a rooftop solar project and claim your part of its monthly income, recorded on Ethereum.</p>
+    <a class="btn" href="#">Meet the project</a>
+  </div>
+  <div class="art"><div class="sun"></div><div class="panel"><div class="glass"></div></div></div>
+</main>
+<script>
+const root = document.documentElement; let k = .5, goal = .5, last = 0;
+addEventListener('pointermove', e => { goal = e.clientX / innerWidth; last = performance.now(); });
+(function loop(now) { if (now - last > 2500) goal = .5 + .38 * Math.sin(now / 2600); k += (goal - k) * .08; root.style.setProperty('--k', k.toFixed(3)); requestAnimationFrame(loop); })(0);
+</script>
+</body>
+</html>

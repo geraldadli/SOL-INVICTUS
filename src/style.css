@@ -4,6 +4,7 @@
   --peach: #FCE7CF; --apricot: #F8D8B2; --line: #E6C9B4; --skeleton: #F3DCC6; --disabled: #EAD3C3;
   --green: #2E7D57; --green-ink: #1F6B47; --green-soft: #DDEFE3; --error: #9E1230; --error-soft: #FBE1E3;
   --on-dark: #F2D9C4; --on-dark-muted: #D9B8A6; --hairline: rgba(131, 9, 45, .1);
+  --bg-top: #F7C493; --bg-upper: #FAD5B0; --bg-lower: #FDE6CC;
   --sunset: linear-gradient(135deg, #FABD3D 0%, #F59A2B 55%, #E95C05 100%);
   --serif: 'Young Serif', Georgia, serif; --sans: 'Plus Jakarta Sans', system-ui, sans-serif; --mono: 'IBM Plex Mono', ui-monospace, monospace;
   --gutter: clamp(14px, 4vw, 48px);
@@ -11,7 +12,12 @@
 }
 * { box-sizing: border-box; }
 /* Plus Jakarta Sans' contextual alternates would render the x in "0x…" addresses as ×. */
+/* No scrollbar: pages that scroll and pages that don't would otherwise shift the centred navbar by the bar's width. */
+html { scrollbar-width: none; }
+html::-webkit-scrollbar { display: none; }
 body { margin: 0; min-height: 100vh; background: var(--cream); color: var(--ink); font-family: var(--sans); font-variant-ligatures: no-contextual; -webkit-font-smoothing: antialiased; }
+/* Golden-hour page background: apricot sky at the top easing into cream, with a sun glow top right and a warm blush bottom left. Fixed, so it stays still while content scrolls. */
+body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(60% 50% at 88% 0%, rgba(250, 189, 61, .42), transparent 70%), radial-gradient(55% 45% at 0% 100%, rgba(240, 150, 120, .22), transparent 70%), linear-gradient(180deg, var(--bg-top) 0%, var(--bg-upper) 28%, var(--bg-lower) 62%, var(--cream) 100%); }
 a { color: var(--maroon); }
 a:hover { color: var(--crimson); }
 button, input, select { font-family: inherit; }
@@ -42,7 +48,7 @@ main:focus { outline: none; }
 .demo-tag { flex: none; padding: 2px 6px; border: 1.5px solid var(--cream); border-radius: 4px; font-size: 10px; font-weight: 800; letter-spacing: .1em; }
 
 /* Header */
-.site-header { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 76px; padding: 0 var(--gutter); background: rgba(255, 244, 228, .9); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-bottom: 1px solid rgba(131, 9, 45, .08); }
+.site-header { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 76px; padding: 0 var(--gutter); background: rgba(255, 244, 228, .66); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-bottom: 1px solid rgba(131, 9, 45, .08); }
 .brand { flex: none; display: flex; align-items: center; gap: 9px; padding: 6px 4px; border-radius: 10px; color: var(--ink); font-family: var(--serif); font-size: clamp(18px, 2vw, 23px); text-decoration: none; }
 .brand:hover { color: var(--ink); }
 .brand-mark { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: repeating-conic-gradient(var(--orange) 0 15deg, var(--sun) 15deg 30deg); }

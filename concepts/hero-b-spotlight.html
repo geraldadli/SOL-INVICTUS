@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sol Invictus — Hero B: Spotlight</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Young+Serif&display=swap" />
+<style>
+:root{--cream:#FFF4E4;--ink:#2B0A12;--ink-soft:#5A1E22;--muted:#7A2E2A;--maroon:#83092D;--maroon-deep:#6E0726;--sun:#FABD3D;--sunset:linear-gradient(135deg,#FABD3D,#F59A2B 55%,#E95C05);--serif:'Young Serif',Georgia,serif;--sans:'Plus Jakarta Sans',system-ui,sans-serif;--gutter:clamp(16px,4vw,56px);--mx:70%;--my:40%}
+*{box-sizing:border-box}html{scrollbar-width:none}html::-webkit-scrollbar{display:none}
+body{margin:0;min-height:100vh;color:var(--ink);font:400 16px/1.55 var(--sans);-webkit-font-smoothing:antialiased;background:linear-gradient(180deg,#F7C493,#FAD5B0 28%,#FDE6CC 62%,#FFF4E4)}
+h1,p{margin:0}
+header{position:relative;z-index:3;height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 var(--gutter)}
+.brand{font:400 22px var(--serif)}.pill{background:#fff;border-radius:99px;padding:9px 18px;font-weight:700;font-size:14px}
+/* the page itself is a solar panel; the cursor is the sun that wakes its cells */
+.hero{position:relative;min-height:calc(100vh - 72px);display:flex;align-items:center;overflow:hidden}
+.cells,.lit{position:absolute;inset:0;background-size:56px 56px;background-image:linear-gradient(rgba(131,9,45,.13) 1.5px,transparent 1.5px),linear-gradient(90deg,rgba(131,9,45,.13) 1.5px,transparent 1.5px)}
+.lit{background-image:linear-gradient(rgba(255,255,255,.7) 1.5px,transparent 1.5px),linear-gradient(90deg,rgba(255,255,255,.7) 1.5px,transparent 1.5px),linear-gradient(135deg,rgba(250,189,61,.9),rgba(233,92,5,.85));
+  -webkit-mask-image:radial-gradient(300px circle at var(--mx) var(--my),#000 0,rgba(0,0,0,.55) 45%,transparent 100%);mask-image:radial-gradient(300px circle at var(--mx) var(--my),#000 0,rgba(0,0,0,.55) 45%,transparent 100%)}
+.glow{position:absolute;inset:0;background:radial-gradient(420px circle at var(--mx) var(--my),rgba(255,226,140,.65),transparent 70%);pointer-events:none}
+.copy{position:relative;z-index:2;max-width:1300px;margin:0 auto;padding:0 var(--gutter);width:100%}
+.kicker{font-size:15px;font-weight:600;color:var(--muted)}
+h1{font:400 clamp(44px,6.4vw,96px)/1.0 var(--serif);letter-spacing:-.025em;margin:14px 0 22px;color:var(--maroon-deep);max-width:11em}
+h1 em{font-style:normal;background:var(--sunset);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lede{font-size:19px;font-weight:500;max-width:28em;color:var(--ink-soft)}
+.btn{display:inline-block;margin-top:30px;border-radius:99px;padding:17px 32px;font:800 16px var(--sans);background:var(--maroon);color:var(--cream);text-decoration:none}
+</style>
+</head>
+<body>
+<header><span class="brand">Sol Invictus</span><span class="pill">Connect wallet</span></header>
+<main class="hero" id="hero">
+  <div class="cells"></div><div class="lit"></div><div class="glow"></div>
+  <div class="copy">
+    <div class="kicker">Cikarang Rooftop Solar · West Java</div>
+    <h1>Own the <em>sunshine.</em> Share the future.</h1>
+    <p class="lede">Buy Sol Coins of a rooftop solar project and claim your part of its monthly income, recorded on Ethereum.</p>
+    <a class="btn" href="#">Meet the project</a>
+  </div>
+</main>
+<script>
+const hero = document.getElementById('hero'), root = document.documentElement;
+let x = innerWidth * .7, y = 300, gx = x, gy = y, last = 0;
+hero.addEventListener('pointermove', e => { const r = hero.getBoundingClientRect(); gx = e.clientX - r.left; gy = e.clientY - r.top; last = performance.now(); });
+(function loop(now) { const r = hero.getBoundingClientRect(); if (now - last > 2500) { gx = r.width * (.55 + .3 * Math.sin(now / 3000)); gy = r.height * (.45 + .2 * Math.cos(now / 2300)); } x += (gx - x) * .1; y += (gy - y) * .1; root.style.setProperty('--mx', x.toFixed(1) + 'px'); root.style.setProperty('--my', y.toFixed(1) + 'px'); requestAnimationFrame(loop); })(0);
+</script>
+</body>
+</html>
