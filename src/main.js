@@ -1,6 +1,7 @@
 import { createSimulation, demoAccounts } from './simulation.js';
 import { ensureWalletNetwork } from './wallet-network.js';
 import { getMetaMaskProvider } from './metamask.js';
+import { createHomeWall } from './home-wall.js';
 import { BrowserProvider, Contract, JsonRpcProvider, ZeroAddress, formatEther, getAddress, isAddress } from 'ethers';
 
 const $ = (selector) => document.querySelector(selector);
@@ -157,6 +158,9 @@ function showPage() {
 function render() {
   renderHeader(); renderProject(); renderPortfolio(); renderOperator(); renderMenu(); renderModal();
   $('#home-sold').textContent = state ? fmt(1000 - state.available) : '—';
+  const held = state && address && !isOperator() ? state.balance : 0;
+  $('#home-mine').textContent = !state ? '—' : !address ? 'Not connected' : isOperator() ? 'Operator' : plural(held, 'coin');
+  wall.update({ ready: Boolean(state), sold: state ? 1000 - state.available : 0, mine: held });
   $('#load-error').textContent = loadError;
   $('#load-error').hidden = !loadError;
 }
@@ -548,6 +552,18 @@ $('#inc-reset').onclick = () => { inc.whatIf = null; renderIncome(); playIncome(
 $('#inc-replay').onclick = () => playIncome();
 // Play the income story once, when it first scrolls into view.
 new IntersectionObserver(entries => { if (!inc.played && entries.some(entry => entry.isIntersecting)) playIncome(); }, { threshold: .4 }).observe($('#income'));
+
+// Home hero: the solar panel of 1,000 cells
+const touch = matchMedia('(pointer: coarse)').matches;
+function renderWallSelection(n) {
+  $('#wall-pick').classList.toggle('on', n > 0);
+  $('#wall-pick-text').textContent = n ? `${plural(n, 'Sol Coin')} · ${idr(n * 100000)} · ${pct(n)} of the project` : '';
+  $('#home-selection').textContent = n ? plural(n, 'coin') : '—';
+  $('#home-hint').textContent = n ? 'Drag again to change your selection, or click a bought cell to clear it.' : touch ? 'Touch and drag across the dark cells to pick your Sol Coins.' : 'Move your cursor over the panel. You are the sun. Drag across dark cells to pick your Sol Coins.';
+}
+const wall = createHomeWall({ canvas: $('#wall-canvas'), tilt: $('#wall-tilt'), onSelect: renderWallSelection });
+renderWallSelection(0);
+$('#wall-buy').addEventListener('click', () => { if (wall.selection) setQty(wall.selection); });
 
 // Dialogs
 function openModal(name) { closeMenu(); ui.modal = name; renderModal(); }

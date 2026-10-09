@@ -57,31 +57,29 @@
     <div id="load-error" class="load-error" role="alert" hidden></div>
 
     <section id="home-page" class="page home">
-      <div class="home-top">
+      <div class="home-grid">
         <div class="home-copy">
           <div class="home-kicker">Cikarang Rooftop Solar · West Java</div>
-          <h1>Own the sunshine.<br>Share the future.</h1>
-          <div class="home-intro">
-            <a class="play-button" href="#how" aria-label="How it works"><svg class="icon" aria-hidden="true"><use href="#i-play" /></svg></a>
-            <p>Buy Sol Coins of a rooftop solar project in Cikarang, West Java, and claim your part of the income it earns each month, recorded on Ethereum.</p>
+          <h1>Own the <em>sunshine.</em><br>Share the future.</h1>
+          <p class="home-lede">Buy Sol Coins of a rooftop solar project in Cikarang, West Java, and claim your part of the income it earns each month, recorded on Ethereum.</p>
+          <div class="home-actions">
+            <a class="btn btn-inline btn-sun" href="#project">Meet the project</a>
+            <a class="btn btn-inline btn-outline" href="#how">How it works</a>
+          </div>
+          <p class="home-hint"><span class="home-hint-dot" aria-hidden="true"></span><span id="home-hint">Move your cursor over the panel. You are the sun.</span></p>
+        </div>
+        <div class="wall">
+          <div class="wall-tilt" id="wall-tilt"><canvas id="wall-canvas" class="wall-canvas" role="img" aria-label="A solar panel of 1,000 cells, one for each Sol Coin"></canvas></div>
+          <div class="wall-pick" id="wall-pick" aria-live="polite"><span id="wall-pick-text"></span><a class="wall-buy" id="wall-buy" href="#project">Buy these coins →</a></div>
+          <div class="wall-stats">
+            <div class="wall-stat"><span class="wall-stat-label">Coins bought</span><b><span id="home-sold">—</span> / 1,000</b></div>
+            <div class="wall-stat"><span class="wall-stat-label">Yours</span><b id="home-mine">—</b></div>
+            <div class="wall-stat"><span class="wall-stat-label">Your selection</span><b id="home-selection">—</b></div>
+          </div>
+          <div class="wall-legend" aria-hidden="true">
+            <span><i class="lg-bought"></i>Bought by others</span><span><i class="lg-mine"></i>Yours</span><span><i class="lg-pick"></i>Your selection</span><span><i class="lg-free"></i>Available</span>
           </div>
         </div>
-        <div class="home-sun">
-          <div class="sun" aria-hidden="true"><div class="sun-glow"></div><div class="sun-rays"></div><div class="sun-disc"></div></div>
-        </div>
-      </div>
-      <div class="home-bottom">
-        <div>
-          <div class="overline">How it works</div>
-          <div class="home-steps">
-            <a class="home-step" href="#how"><span class="home-step-n">1</span><span class="home-step-text">Buy<br>Sol Coins</span></a>
-            <span class="home-step-divider" aria-hidden="true"></span>
-            <a class="home-step" href="#how"><span class="home-step-n">2</span><span class="home-step-text">The project<br>earns</span></a>
-            <span class="home-step-divider" aria-hidden="true"></span>
-            <a class="home-step" href="#how"><span class="home-step-n">3</span><span class="home-step-text">Claim your<br>income</span></a>
-          </div>
-        </div>
-        <a class="project-cta" href="#project"><span class="cta-sun" aria-hidden="true"></span><span class="cta-text"><strong>Meet the project</strong><span class="cta-sub"><span id="home-sold">—</span> of 1,000 Sol Coins bought</span></span><span class="cta-arrow" aria-hidden="true"><svg class="icon icon-cta"><use href="#i-next" /></svg></span></a>
       </div>
     </section>
 

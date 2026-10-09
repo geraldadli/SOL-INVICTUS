@@ -41,6 +41,10 @@ canvas{display:block;width:100%;height:auto;border-radius:26px;box-shadow:0 50px
 .pick{position:absolute;left:50%;bottom:-6px;transform:translate(-50%,40px);opacity:0;pointer-events:none;transition:all .35s cubic-bezier(.2,.9,.3,1.2);display:flex;gap:14px;align-items:center;background:var(--ink);color:var(--cream);border-radius:99px;padding:8px 8px 8px 22px;font-weight:600;font-size:14px;white-space:nowrap;z-index:3}
 .pick.on{opacity:1;pointer-events:auto;transform:translate(-50%,-16px)}
 .pick a{background:var(--sunset);color:var(--ink);border-radius:99px;padding:10px 18px;font-weight:800;text-decoration:none}
+.modes{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:16px;font-size:13px}
+.modes b{margin-right:4px;color:var(--ink-soft)}
+.modes button{border:1.5px solid var(--line);background:rgba(255,255,255,.7);border-radius:99px;padding:7px 14px;font:700 13px var(--sans);color:var(--ink-soft);cursor:pointer}
+.modes button[aria-pressed=true]{background:var(--maroon);border-color:var(--maroon);color:var(--cream)}
 .legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:14px;font-size:13px;font-weight:600;color:var(--ink-soft)}
 .legend span{display:inline-flex;gap:7px;align-items:center}.legend i{width:12px;height:12px;border-radius:3px}
 @media(max-width:980px){.hero{grid-template-columns:1fr;min-height:0}.hud b{font-size:20px}}
@@ -66,6 +70,8 @@ canvas{display:block;width:100%;height:auto;border-radius:26px;box-shadow:0 50px
       <div><span>Coins lit</span><b id="lit">0</b><small>by the sun right now</small></div>
       <div><span>Already owned</span><b id="own">312 / 1,000</b><small>gold cells</small></div>
     </div>
+    <div class="modes" role="group" aria-label="Demo: what the sun does when the cursor leaves the panel"><b>When the cursor leaves the panel:</b>
+      <button data-mode="glide" aria-pressed="true">Glide on</button><button data-mode="set" aria-pressed="false">Set &amp; rise</button><button data-mode="noon" aria-pressed="false">Rest at noon</button><button data-mode="hold" aria-pressed="false">Hold (old)</button></div>
     <div class="legend"><span><i style="background:#E95C05"></i>Owned by someone</span><span><i style="background:#3b1126"></i>Available</span><span><i style="background:#fff;box-shadow:inset 0 0 0 2px #FABD3D"></i>Your selection</span></div>
   </div>
 </main>
@@ -74,7 +80,7 @@ canvas{display:block;width:100%;height:auto;border-radius:26px;box-shadow:0 50px
 const COLS = 40, ROWS = 25, SOLD = 312, M = 16;
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-let W, H, cs, dpr, sx = .5, sy = .4, tx = .5, ty = .4, active = 0, t0 = performance.now();
+let W, H, cs, dpr, sx = .5, sy = .4, tx = .5, ty = .4, active = 0, t0 = performance.now(), inside = false, mode = 'glide';
 let sel = 0, painting = false, kw = 0, lit = 0, lastHud = 0;
 const lerp = (a, b, k) => a + (b - a) * k, clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const mix = (a, b, k) => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)];
@@ -91,9 +97,15 @@ function rr(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
 
 function frame(now) {
   const t = (now - t0) / 1000;
-  const idle = now - active > 2600;
-  if (idle) { tx = .5 + .4 * Math.sin(t * .45); ty = .42 + .22 * Math.cos(t * .7); }
-  sx = lerp(sx, tx, .1); sy = lerp(sy, ty, .1);
+  // Where the sun heads when the cursor is NOT on the panel. While it is, the sun follows the cursor (see aim()).
+  if (!inside) {
+    if (mode === 'glide') { tx = .5 + .4 * Math.sin(t * .45); ty = .42 + .22 * Math.cos(t * .7); }
+    else if (mode === 'set') ty = 1.4;
+    else if (mode === 'noon') { tx = .5; ty = .16; }
+    else if (now - active > 2600) { tx = .5 + .4 * Math.sin(t * .45); ty = .42 + .22 * Math.cos(t * .7); }
+  }
+  sx = lerp(sx, tx, mode === 'set' && !inside ? .05 : .1); sy = lerp(sy, ty, mode === 'set' && !inside ? .035 : .1);
+  const lvl = clamp((1.15 - sy) / .55, 0, 1); // 1 while the sun is over the panel, fades to 0 as it sets below it
   const px = sx * W, py = sy * H, sigma = cs * 6.2;
   // frame + glass backing
   const fg = ctx.createLinearGradient(0, 0, W, H); fg.addColorStop(0, '#d9c4b8'); fg.addColorStop(.5, '#8d6a62'); fg.addColorStop(1, '#c9b0a4');
@@ -103,7 +115,7 @@ function frame(now) {
   let sum = 0, count = 0;
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
     const i = r * COLS + c, x = M + c * cs, y = M + r * cs, g = cs * .12, w = cs - g * 2;
-    const dx = x + cs / 2 - px, dy = y + cs / 2 - py, L = Math.exp(-(dx * dx + dy * dy) / (2 * sigma * sigma));
+    const dx = x + cs / 2 - px, dy = y + cs / 2 - py, L = Math.exp(-(dx * dx + dy * dy) / (2 * sigma * sigma)) * lvl;
     sum += L; if (L > .35) count++;
     const sold = i < SOLD, picked = i >= SOLD && i < SOLD + sel;
     let col = mix(GLASS, GLASS2, (Math.sin(i * 12.9898) * .5 + .5) * .6);
@@ -121,6 +133,7 @@ function frame(now) {
   gl.addColorStop(0, 'rgba(255,255,255,0)'); gl.addColorStop(.5, 'rgba(255,255,255,.10)'); gl.addColorStop(1, 'rgba(255,255,255,0)');
   rr(5, 5, W - 10, H - 10, 22); ctx.fillStyle = gl; ctx.fill();
   // the sun
+  ctx.save(); ctx.beginPath(); ctx.roundRect(5, 5, W - 10, H - 10, 22); ctx.clip(); ctx.globalAlpha = lvl;
   ctx.globalCompositeOperation = 'lighter';
   const halo = ctx.createRadialGradient(px, py, 0, px, py, cs * 9); halo.addColorStop(0, 'rgba(255,214,120,.55)'); halo.addColorStop(.4, 'rgba(250,150,40,.22)'); halo.addColorStop(1, 'rgba(250,150,40,0)');
   ctx.fillStyle = halo; ctx.fillRect(0, 0, W, H);
@@ -130,12 +143,13 @@ function frame(now) {
   ctx.restore();
   const disc = ctx.createRadialGradient(px - cs * .3, py - cs * .3, 0, px, py, cs * 1.2); disc.addColorStop(0, '#FFF4C8'); disc.addColorStop(.55, '#FABD3D'); disc.addColorStop(1, '#E95C05');
   ctx.beginPath(); ctx.arc(px, py, cs * 1.15, 0, 7); ctx.fillStyle = disc; ctx.fill();
+  ctx.restore();
   kw = lerp(kw, clamp(sum / 24, 0, 10), .15); lit = count;
   if (now - lastHud > 90) { lastHud = now; document.getElementById('kw').textContent = kw.toFixed(1) + ' kW'; document.getElementById('lit').textContent = lit; }
   if (!reduce) requestAnimationFrame(frame);
 }
 function cellAt(e) { const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W, y = (e.clientY - r.top) / r.height * H; return clamp(Math.floor((y - M) / cs), 0, ROWS - 1) * COLS + clamp(Math.floor((x - M) / cs), 0, COLS - 1); }
-function aim(e) { const r = cv.getBoundingClientRect(); tx = (e.clientX - r.left) / r.width; ty = (e.clientY - r.top) / r.height; active = performance.now(); }
+function aim(e) { inside = true; const r = cv.getBoundingClientRect(); tx = (e.clientX - r.left) / r.width; ty = (e.clientY - r.top) / r.height; active = performance.now(); }
 function setSel(n) {
   sel = clamp(n, 0, TOTAL_FREE); const p = document.getElementById('pick');
   p.classList.toggle('on', sel > 0);
@@ -146,7 +160,9 @@ const TOTAL_FREE = COLS * ROWS - SOLD;
 cv.addEventListener('pointerdown', e => { aim(e); const i = cellAt(e); if (i >= SOLD) { painting = true; cv.setPointerCapture(e.pointerId); setSel(i - SOLD + 1); } });
 cv.addEventListener('pointermove', e => { aim(e); if (painting) { const i = cellAt(e); setSel(Math.max(1, i - SOLD + 1)); } const r = cv.getBoundingClientRect(), nx = (e.clientX - r.left) / r.width - .5, ny = (e.clientY - r.top) / r.height - .5; const t = document.getElementById('tilt'); t.style.setProperty('--ry', (nx * 7).toFixed(2) + 'deg'); t.style.setProperty('--rx', (-ny * 5).toFixed(2) + 'deg'); });
 cv.addEventListener('pointerup', () => painting = false); cv.addEventListener('pointercancel', () => painting = false);
-cv.addEventListener('pointerleave', () => { const t = document.getElementById('tilt'); t.style.setProperty('--ry', '0deg'); t.style.setProperty('--rx', '0deg'); });
+cv.addEventListener('pointerenter', () => { inside = true; });
+cv.addEventListener('pointerleave', () => { inside = false; active = performance.now(); const t = document.getElementById('tilt'); t.style.setProperty('--ry', '0deg'); t.style.setProperty('--rx', '0deg'); });
+document.querySelectorAll('.modes button').forEach(b => b.addEventListener('click', () => { mode = b.dataset.mode; document.querySelectorAll('.modes button').forEach(x => x.setAttribute('aria-pressed', x === b)); }));
 addEventListener('resize', size);
 size(); setSel(0);
 if (reduce) { tx = sx = .5; ty = sy = .4; frame(performance.now()); } else requestAnimationFrame(frame);
