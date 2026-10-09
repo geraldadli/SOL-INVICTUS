@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Launch on Sepolia · SuryaShare</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <header class="site-header"><a class="brand" href="./">SURYA<span>SHARE</span></a><span class="pill">Sepolia testnet only</span></header>
+  <main class="site-width" style="max-width:850px;padding-block:60px">
+    <div class="page-heading"><div><span class="eyebrow">ONE-TIME PROJECT SETUP</span><h1>Take your solar<br>project online.</h1><p>Deploy SuryaShare from your own wallet. No private key leaves your wallet.</p></div></div>
+    <article class="card">
+      <h2>One wallet. One contract.</h2>
+      <p>This wallet becomes the permanent solar operator and receives all 1,000 initial SURYA shares. Use a separate investor wallet to buy shares later.</p>
+      <p>You need free Sepolia test ETH for the deployment fee. Your wallet shows the fee before you confirm.</p>
+      <p><a class="text-button" href="https://ethereum.org/developers/docs/networks/#sepolia" target="_blank" rel="noopener noreferrer">Find a Sepolia faucet ↗</a></p>
+      <button class="secondary-button" id="connect" type="button">1. Connect operator wallet</button>
+      <p id="wallet" style="overflow-wrap:anywhere">Open this page in a browser with MetaMask or another Ethereum wallet.</p>
+      <button class="primary-button" id="deploy" type="button" disabled>2. Deploy on Sepolia</button>
+      <p id="status" role="status" aria-live="polite" style="overflow-wrap:anywhere"></p>
+      <a id="receipt" class="text-button" target="_blank" rel="noopener noreferrer" hidden>View deployment on Etherscan ↗</a>
+      <p id="next" hidden>Send the transaction hash above back to this chat. We will verify the contract and connect it to the public website. Do not deploy again.</p>
+    </article>
+  </main>
+  <script type="module" src="/src/deploy.js"></script>
+</body>
+</html>

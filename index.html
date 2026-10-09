@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Buy solar project shares. Join the blockchain. SuryaShare makes solar ownership a shared experience — a hackathon demo powered by Ethereum." />
+  <meta name="theme-color" content="#fff9df" />
+  <title>SuryaShare — Own the sunshine.</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="#home" aria-label="SuryaShare home"><img src="/favicon.svg" alt="" />SURYA<span>SHARE</span></a>
+    <nav aria-label="Main navigation"><a href="#project" data-page="project">Buy shares</a><a href="#how" data-page="how">How it works</a><a href="#portfolio" data-page="portfolio">My shares</a></nav>
+    <button id="wallet-button" class="wallet-button" type="button">Connect wallet <span>↗</span></button>
+  </header>
+  <main id="main-content" tabindex="-1">
+    <div id="connection-error" class="notice error site-width" role="alert" hidden></div>
+    <section id="home-page" class="page">
+      <div class="hero site-width">
+        <div class="hero-copy"><span class="hero-badge">Blockchain for shared solar</span><h1>Own the<br>sunshine.<br><span>Share the future.</span></h1><p>Buy solar project shares. Join the blockchain.<br>Get your slice of demo energy income.</p><div class="hero-actions"><a class="primary-button" href="#project">Get solar shares <span>↗</span></a><a class="text-button" href="#how">Discover how it works <span>→</span></a></div><p class="demo-note"><span aria-hidden="true">✳</span> Hackathon demo. Test tokens. Real on-chain activity.</p></div>
+        <div class="hero-visual" aria-label="One SURYA token represents one of the project's 1,000 demo shares"><img class="hero-sun" src="/favicon.svg" alt="" /><div class="token-card"><div class="token-top"><span>SURYA</span><span aria-hidden="true">↗</span></div><div class="token-value">01<span> / 1,000</span></div><div class="token-bottom"><span>Your piece of<br>a brighter future.</span><span class="token-symbol" aria-hidden="true">☀</span></div></div><div class="ownership-label"><span aria-hidden="true">✓</span> Your shares. On the blockchain.</div></div>
+      </div>
+      <div class="journey-strip"><span>BUY SOLAR SHARES</span><span aria-hidden="true">✳</span><span>HOLD SURYA TOKENS</span><span aria-hidden="true">✳</span><span>CLAIM DEMO INCOME</span></div>
+      <section class="home-intro site-width"><div><span class="eyebrow">SOLAR OWNERSHIP, OPENED UP.</span><h2>A big idea.<br>A smaller buy-in.</h2></div><div><p>SuryaShare turns a solar project into digital shares you can buy, hold, and transfer. Every transaction leaves a record you can check.</p><a class="text-button" href="#project">Meet your first solar project <span>↗</span></a></div></section>
+    </section>
+    <section id="project-page" class="page site-width" hidden>
+      <div class="page-heading"><div><span class="eyebrow">YOUR FIRST SOLAR SHARE</span><h1>A little solar.<br>A lot of possibility.</h1></div><span class="pill">Demo project · Indonesia</span></div>
+      <div class="project-grid">
+        <article class="asset-card"><div class="asset-top"><span>CIKARANG / 001</span><span aria-hidden="true">✳</span></div><h2>Cikarang<br>Rooftop Solar</h2><p>A fictional rooftop project in West Java.<br>Built for you to explore shared ownership.</p><div class="asset-specs"><div><strong>1,000</strong><span>Total shares</span></div><div><strong>10 <small>kWp</small></strong><span>Model capacity</span></div></div><div class="asset-community"><span>Community share</span><strong id="community-ownership">—</strong><p id="sold-caption">Connecting…</p></div></article>
+        <article class="card purchase-card"><div class="section-heading"><h2>Make it yours.</h2><span class="pill">SURYA</span></div><div class="share-price">Rp100,000 <span>/ demo share</span></div><p class="price-note">Pay 0.0001 test ETH per share.</p><form id="buy-form"><label for="share-count">Choose your shares</label><div class="quantity-input"><button type="button" id="decrease-shares" aria-label="Decrease shares">−</button><input id="share-count" type="number" min="1" max="1000" step="1" value="100" required /><span>SURYA</span><button type="button" id="increase-shares" aria-label="Increase shares">+</button></div><div class="order-row"><span>Project share in this purchase</span><strong id="purchase-ownership">10.0%</strong></div><div class="order-row"><span>Demo total</span><strong id="purchase-total">Rp10,000,000</strong></div><button class="primary-button" id="buy-button" type="submit" disabled>Connecting…</button><p class="form-footnote" id="purchase-footnote">Test ETH only. No real money.</p></form><div class="funding-row"><span id="funding-label">0 of 1,000 shares purchased</span><strong id="funding-percent">0%</strong></div><progress id="funding-progress" max="1000" value="0" aria-label="Shares purchased"></progress></article>
+      </div>
+      <div class="project-summary"><div><span>Demo income deposited</span><strong id="project-revenue">—</strong></div><p>Buy shares, then visit My shares to see your holdings and claim available income.</p><a class="text-button" href="#portfolio">My shares <span>↗</span></a></div>
+      <article class="card activity-card"><div class="section-heading"><h2>On-chain activity</h2><button type="button" class="text-button" id="refresh-button">Refresh ↻</button></div><div id="project-activity" class="empty-state">Be the first to make your mark.</div></article>
+    </section>
+    <section id="how-page" class="page site-width" hidden>
+      <div class="page-heading"><div><span class="eyebrow">FROM SUNLIGHT TO SHARED VALUE</span><h1>Energy connects us.<br>Blockchain brings us in.</h1><p>Solar projects, energy users, and shareholders — one transparent record.</p></div></div>
+      <div class="ecosystem" aria-label="Conceptual energy flow: solar projects to utilities to energy users. Our hackathon simulates this energy layer. An operator submits sample reports to SuryaShare's blockchain, where users buy shares and claim demo income.">
+        <div class="energy-lane"><span class="lane-title">THE ENERGY WORLD <span>Simulated in this demo</span></span><div class="energy-flow"><div class="energy-node"><span aria-hidden="true">☀</span><h3>Solar projects</h3></div><span class="flow-arrow" aria-hidden="true">→</span><div class="energy-node"><span aria-hidden="true">ϟ</span><h3>Grid & utilities</h3></div><span class="flow-arrow" aria-hidden="true">→</span><div class="energy-node"><span aria-hidden="true">⌂</span><h3>Energy users</h3></div></div></div>
+        <div class="report-bridge"><span aria-hidden="true">↓</span><p>Operator submits a sample energy report</p><span aria-hidden="true">↓</span></div>
+        <div class="blockchain-lane"><div class="chain-hub"><span class="eyebrow">THE SURYASHARE PLATFORM</span><h2>One shared record.</h2><p>Project reports · Share ownership · Income claims</p><span class="pill">Ethereum smart contract</span></div><div class="participation-bridge" aria-hidden="true">⇄</div><div class="shareholder-node"><span class="you-tag">YOU</span><h3>Buy. Hold. Participate.</h3><p>Get shares and claim your<br>piece of demo income.</p><a class="primary-button" href="#project">Join the demo <span>↗</span></a></div></div>
+      </div>
+      <div class="three-steps"><article><span>01</span><h3>Pick your shares.</h3><p>Buy a piece of the demo project with test ETH.</p></article><article><span>02</span><h3>Make it on-chain.</h3><p>Hold SURYA tokens and verify your transactions.</p></article><article><span>03</span><h3>Share the upside.</h3><p>Claim simulated income based on the shares you held.</p></article></div>
+      <div class="demo-explainer"><h3>No panels required to try it.</h3><p>Energy data is simulated. Purchases, transfers, and claims run on our development blockchain. No hardware or utilities are connected.</p><a class="text-button" href="#operator">Open the demo lab <span>↗</span></a></div>
+    </section>
+    <section id="portfolio-page" class="page site-width" hidden></section>
+    <section id="operator-page" class="page site-width" hidden></section>
+  </main>
+  <footer class="site-width"><div><a class="brand" href="#home"><img src="/favicon.svg" alt="" />SURYA<span>SHARE</span></a><p>Solar, shared.</p></div><div class="footer-links"><a href="#operator" data-page="operator">Demo lab</a><button type="button" id="about-button">About this demo</button><span id="network-badge">Local Ethereum</span><span id="contract-caption" hidden></span></div><p class="footer-disclaimer">Hackathon prototype. Simulated assets. No legal ownership rights.</p></footer>
+  <dialog id="wallet-dialog"><div class="dialog-heading"><h2>Your sunshine starts here.</h2><button type="button" data-close aria-label="Close wallet dialog">×</button></div><p>Pick a funded demo wallet. No setup needed.</p><div class="wallet-options"><button type="button" data-wallet="1"><span class="avatar">A</span><span><strong>Alice</strong><small>Demo investor</small></span><span>→</span></button><button type="button" data-wallet="2"><span class="avatar blue">B</span><span><strong>Budi</strong><small>Demo investor</small></span><span>→</span></button><button type="button" data-wallet="0"><span class="avatar yellow">S</span><span><strong>Solar operator</strong><small>Run the income demo</small></span><span>→</span></button></div><button type="button" id="browser-wallet" class="secondary-button">Connect MetaMask</button><p class="form-footnote">Test wallets only. Never send real funds.</p></dialog>
+  <dialog id="about-dialog"><div class="dialog-heading"><h2>A real blockchain.<br>A simulated solar world.</h2><button type="button" data-close aria-label="Close explanation">×</button></div><p>This hackathon prototype lets you buy, hold, and transfer shares in a fictional solar project, then claim simulated income.</p><p>No panels, meters, utilities, or fiat payments are connected. Tokens do not provide legal ownership.</p><details><summary>The demo numbers</summary><p>1,000 equal shares. Unsold units belong to the operator. Income is allocated to whoever holds the shares when the operator deposits it.</p><p>Rp1,000,000 = 0.001 test ETH is a presentation scale, not an exchange rate. Reports are simulated; blockchain records do not prove physical energy production.</p></details></dialog>
+  <dialog id="receipt-dialog"><div class="dialog-heading"><h2>Your on-chain proof.</h2><button type="button" data-close aria-label="Close transaction receipt">×</button></div><div id="receipt-content"></div></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
