@@ -5,6 +5,7 @@ import { reportAmounts, utcPeriod } from './reporting.js';
 import { auditIncome, validateEvidence, operatingStatuses } from './verification.js';
 import { advanceLocalDemo, canAdvanceLocalDemo } from './local-demo-clock.js';
 import { createHomeWall } from './home-wall.js';
+import { createReveal, fadeInPage, initButtonRays, tick } from './motion.js';
 import { createMilestoneScreen, readMilestones } from './milestones.js';
 import { BrowserProvider, Contract, JsonRpcProvider, ZeroAddress, formatEther, getAddress, isAddress } from 'ethers';
 
@@ -98,6 +99,7 @@ function renderReporting() {
     : state.purchasesPaused ? 'Purchases paused by operator' : state.overdue ? 'Report overdue — purchases blocked' : 'Reporting up to date';
   const sourceNote = reportSourceNote();
   const detail = state?.safeguards ? `<p>Last report: ${state.lastPeriod ? periodLabel(state.lastPeriod) : 'None yet'}. Next required: <strong>${periodLabel(state.nextReportingPeriod)}</strong>.</p><p>Reporting opens: ${utcDate(state.reportingOpensAt)}<br>Due by: ${utcDate(state.reportDueAt)}</p><p>Claims and transfers remain available. ${sourceNote}</p>` : '<p>Monthly deadlines and purchase pausing require a version 2 or later contract.</p>';
+  // The operator lab's #operator-reporting-status is drawn as a schedule by renderOperatorOverview().
   $('#reporting-status').innerHTML = `<h2>${status}</h2>${detail}`;
   $('#reporting-controls').hidden = !state?.safeguards;
   $('#simulation-clock').hidden = !simulation;
@@ -211,6 +213,8 @@ function showPage() {
   });
   closeMenu();
   window.scrollTo({ top: 0, behavior: 'instant' });
+  fadeInPage($(`#${page}-page`)); reveal.replay($(`#${page}-page`));
+  if (page === 'how') lightHowSteps(); else stopHowSteps();
 }
 function render() {
   renderHeader(); renderProject(); renderPortfolio(); renderOperator(); renderReporting(); renderVerification(); renderMenu(); renderModal(); milestoneScreen.render();
@@ -561,7 +565,7 @@ const TOTAL = 1000, COLS = 40;
 const ledgerEl = $('#tiles'), tipEl = $('#tip');
 const tileEls = Array.from({ length: TOTAL }, () => document.createElement('i'));
 ledgerEl.append(...tileEls);
-const ledger = { kinds: [], geo: null, mx: -1e4, my: -1e4, tx: -1e4, ty: -1e4, rippling: false, painting: false, mine: undefined, owner: undefined, reports: undefined };
+const ledger = { kinds: [], geo: null, tx: -1e4, ty: -1e4, hover: -1, rippling: false, painting: false, mine: undefined, owner: undefined, reports: undefined };
 function renderLedger() {
   if (!state) return;
   const sold = TOTAL - state.available, mine = address && !isOperator() ? Math.min(state.balance, sold) : 0;
@@ -600,19 +604,21 @@ function showTip(text, x, y) {
   tipEl.textContent = text; tipEl.classList.add('on');
   tipEl.style.left = `${Math.min(Math.max(8, x + 14), innerWidth - tipEl.offsetWidth - 8)}px`; tipEl.style.top = `${y + 18}px`;
 }
-// Tiles near the pointer lift (scale, ring, shadow, colour) along a smooth bell curve. The pointer is eased too, so the lift trails the cursor instead of snapping to it.
+// The tile under the pointer grows and brightens (--f); its neighbours brighten a little along a soft falloff (--h). Both ease in and out frame by frame.
+const easeTo = (cur, target) => Math.abs(target - cur) < .003 ? target : cur + (target - cur) * .25;
 function ripple() {
   ledger.geo ??= tileEls.map(tile => ({ x: tile.offsetLeft + tile.offsetWidth / 2, y: tile.offsetTop + tile.offsetHeight / 2 }));
-  const radius = 120, near = ledger.mx > -1e3;
-  if (near) { ledger.mx += (ledger.tx - ledger.mx) * .3; ledger.my += (ledger.ty - ledger.my) * .3; }
-  let moving = near && Math.hypot(ledger.tx - ledger.mx, ledger.ty - ledger.my) > .5;
+  const radius = (ledger.geo[1].x - ledger.geo[0].x) * 2.2, near = ledger.tx > -1e3;
+  let moving = false;
   tileEls.forEach((tile, i) => {
-    const g = ledger.geo[i], t = near ? Math.max(0, 1 - Math.hypot(g.x - ledger.mx, g.y - ledger.my) / radius) : 0;
-    const target = t * t * (3 - 2 * t), cur = tile._lift ?? 0, next = Math.abs(target - cur) < .003 ? target : cur + (target - cur) * .22;
-    if (next === cur) return;
-    tile._lift = next; moving = true;
-    if (next === 0) { tile.style.removeProperty('--h'); tile.style.scale = ''; tile.style.zIndex = ''; return; }
-    tile.style.setProperty('--h', next.toFixed(3)); tile.style.scale = (1 + .5 * next).toFixed(3); tile.style.zIndex = String(1 + Math.round(next * 10));
+    const g = ledger.geo[i], t = near ? Math.max(0, 1 - Math.hypot(g.x - ledger.tx, g.y - ledger.ty) / radius) : 0;
+    const glow = easeTo(tile._glow ?? 0, t * t * (3 - 2 * t)), focus = easeTo(tile._focus ?? 0, i === ledger.hover ? 1 : 0);
+    if (glow === (tile._glow ?? 0) && focus === (tile._focus ?? 0)) return;
+    tile._glow = glow; tile._focus = focus; moving = true;
+    if (!glow && !focus) { tile.style.removeProperty('--f'); tile.style.filter = tile.style.scale = tile.style.zIndex = ''; return; }
+    tile.style.setProperty('--f', focus.toFixed(3));
+    tile.style.filter = `brightness(${(1 + glow * .2 + focus * .3).toFixed(3)}) saturate(${(1 + focus * .2).toFixed(3)})`;
+    tile.style.scale = (1 + 1.4 * focus).toFixed(3); tile.style.zIndex = String(1 + Math.round(focus * 10));
   });
   if (moving) requestAnimationFrame(ripple); else ledger.rippling = false;
 }
@@ -625,14 +631,13 @@ ledgerEl.addEventListener('pointerdown', event => {
 });
 ledgerEl.addEventListener('pointermove', event => {
   const r = ledgerEl.getBoundingClientRect(), i = tileAt(event.clientX, event.clientY), kind = ledger.kinds[i];
-  ledger.tx = event.clientX - r.left; ledger.ty = event.clientY - r.top;
-  if (ledger.mx < -1e3) { ledger.mx = ledger.tx; ledger.my = ledger.ty; }
+  ledger.tx = event.clientX - r.left; ledger.ty = event.clientY - r.top; ledger.hover = i;
   if (ledger.painting) paintTo(i);
   const name = `Sol Coin #${String(i + 1).padStart(4, '0')}`;
   showTip(kind === 'mine' ? `${name} · Yours` : kind === 'sold' ? `${name} · Held by another investor` : `${name} · Available · ${idr(100000)}`, event.clientX, event.clientY);
   if (event.pointerType === 'mouse') kickRipple();
 });
-ledgerEl.addEventListener('pointerleave', () => { ledger.mx = ledger.my = ledger.tx = ledger.ty = -1e4; tipEl.classList.remove('on'); kickRipple(); });
+ledgerEl.addEventListener('pointerleave', () => { ledger.tx = ledger.ty = -1e4; ledger.hover = -1; tipEl.classList.remove('on'); kickRipple(); });
 for (const type of ['pointerup', 'pointercancel']) ledgerEl.addEventListener(type, () => { ledger.painting = false; });
 addEventListener('resize', () => { ledger.geo = null; });
 
@@ -645,6 +650,39 @@ function burst(x, y) {
     dot.animate([{ transform: 'translate(0, 0) scale(1)', opacity: 1 }, { transform: `translate(${Math.cos(angle) * speed}px, ${Math.sin(angle) * speed - 60}px) scale(.2)`, opacity: 0 }], { duration: 900 + Math.random() * 400, easing: 'cubic-bezier(.2, .8, .3, 1)' }).onfinish = () => dot.remove();
   }
 }
+
+// Page motion: content blocks fade up into view, and buttons flash sunrays on hover
+const reveal = createReveal('.home-copy, .wall-stat, .project-hero, .stat, .card, .buy-card, .page-head, .tile, .empty-card, .claim-card, .claim-empty, .breakdown, .how-title, .how-lede, .example, .example-result, .how-note');
+initButtonRays();
+
+// How it works: the five steps light up one by one like lamps, then the worked example counts up to the payout for the chosen holding
+const EXAMPLE_PER_COIN = 1189; // Rp per Sol Coin in the worked example
+const flowEl = $('.flow'), flowSteps = [...flowEl.children], heldQty = $('#held-qty'), heldAmount = $('#held-amount');
+const how = { timers: [], lampsDone: false, inView: false, counted: false };
+if (!reduceMotion) flowEl.classList.add('lamps');
+function lightHowSteps() {
+  stopHowSteps(); how.lampsDone = false; how.counted = false;
+  if (reduceMotion) { flowSteps.forEach(step => step.classList.add('lit')); how.lampsDone = true; countHeld(); return; }
+  tick(heldAmount, 0, { duration: 0, format: idr });
+  flowSteps.forEach((step, i) => { step.classList.remove('lit'); how.timers.push(setTimeout(() => step.classList.add('lit'), 250 + i * 380)); });
+  how.timers.push(setTimeout(() => { how.lampsDone = true; countHeld(); }, 250 + flowSteps.length * 380 + 150));
+}
+function stopHowSteps() { how.timers.forEach(clearTimeout); how.timers = []; }
+function countHeld() { if (how.lampsDone && how.inView && !how.counted) { how.counted = true; renderHeld(1200); } }
+function renderHeld(duration = 450) {
+  const qty = Math.min(1000, whole(heldQty.value)), amount = qty * EXAMPLE_PER_COIN;
+  $('#held-dec').disabled = qty <= 1; $('#held-inc').disabled = qty >= 1000;
+  $('#held-eth').textContent = `${eth(BigInt(amount) * GWEI)}, ready to claim`;
+  $('#held-live').textContent = `${plural(qty, 'Sol Coin')} would earn ${idr(amount)}`;
+  if (how.counted) tick(heldAmount, amount, { duration, format: idr });
+}
+const setHeld = qty => { heldQty.value = String(Math.min(1000, Math.max(1, qty))); how.counted = true; renderHeld(); };
+new IntersectionObserver(([entry]) => { how.inView = entry.isIntersecting; countHeld(); }, { threshold: .4 }).observe($('.example-result'));
+heldQty.oninput = () => { heldQty.value = digits(heldQty.value, 4); how.counted = true; renderHeld(); };
+heldQty.onchange = () => setHeld(whole(heldQty.value));
+$('#held-dec').onclick = () => setHeld(whole(heldQty.value) - 1);
+$('#held-inc').onclick = () => setHeld(whole(heldQty.value) + 1);
+renderHeld();
 
 // Income: how a month's sunshine becomes money in your wallet (My Sol Coins page)
 const inc = { whatIf: null, run: 0, played: false };

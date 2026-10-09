@@ -403,7 +403,7 @@
 
               <section class="card proceeds-card" aria-labelledby="proceeds-title">
                 <div class="card-head"><h2 id="proceeds-title">Sale proceeds</h2></div>
-                <p class="card-text" id="proceeds-note">Funding received from Sol Coin purchases.</p>
+                <p class="card-text" id="proceeds-note">What investors paid for Sol Coins, held by the contract until you withdraw it.</p>
                 <a class="op-link" href="#milestones">View funding milestones</a>
                 <div class="proceeds-value" id="proceeds-rp">Rp0</div>
                 <div class="tile-note" id="proceeds-eth">0 test ETH</div>
@@ -492,7 +492,14 @@
             </div>
           </div>
           <div class="example-result">
-            <div><div class="claim-label">If you held 25 Sol Coins</div><div class="claim-amount">Rp29,725</div><div class="claim-eth">0.000029725 test ETH, ready to claim</div></div>
+            <div>
+              <div class="claim-label held-line">If you held
+                <span class="held-stepper"><button type="button" id="held-dec" class="held-step" aria-label="Fewer Sol Coins">−</button><input id="held-qty" class="held-qty" value="25" inputmode="numeric" autocomplete="off" aria-label="Number of Sol Coins held" /><button type="button" id="held-inc" class="held-step" aria-label="More Sol Coins">+</button></span>
+                Sol Coins</div>
+              <div class="claim-amount" id="held-amount" aria-hidden="true">Rp29,725</div>
+              <span class="visually-hidden" id="held-live" aria-live="polite"></span>
+              <div class="claim-eth" id="held-eth">0.000029725 test ETH, ready to claim</div>
+            </div>
             <a class="btn btn-example" href="#project">Meet the project</a>
           </div>
         </div>
