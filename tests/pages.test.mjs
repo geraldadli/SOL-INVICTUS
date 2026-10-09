@@ -29,6 +29,14 @@ test('Pages connects to the verified Sepolia deployment without publishing deplo
       assert.ok(deployment.abi.some(item => item.type === 'function' && item.name === name));
     }
   }
+  if (deployment.contractVersion === 4) {
+    assert.equal(new URL(deployment.verifierUrl).protocol, 'https:');
+    for (const name of ['trustedVerifier', 'milestoneReviewer', 'submitMilestone', 'reviewMilestone', 'availableSaleProceeds']) {
+      assert.ok(deployment.abi.some(item => item.type === 'function' && item.name === name));
+    }
+    assert.match(deployment.verifier, /^0x[\da-f]{40}$/i);
+    assert.match(deployment.milestoneReviewer, /^0x[\da-f]{40}$/i);
+  }
   assert.equal(existsSync('dist/deploy.html'), false);
   assert.equal(readdirSync('dist').some(name => /^deployment-.*\.json$/.test(name)), false);
   const invalid = spawnSync(process.execPath, ['scripts/connect-sepolia.mjs', 'not-a-transaction'], { encoding: 'utf8' });

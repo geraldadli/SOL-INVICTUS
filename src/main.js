@@ -6,6 +6,7 @@ import { auditIncome, validateEvidence, operatingStatuses } from './verification
 import { advanceLocalDemo, canAdvanceLocalDemo } from './local-demo-clock.js';
 import { createHomeWall } from './home-wall.js';
 import { createMilestoneScreen, readMilestones } from './milestones.js';
+import { verifierEndpoint } from './deployment-settings.js';
 import { BrowserProvider, Contract, JsonRpcProvider, ZeroAddress, formatEther, getAddress, isAddress } from 'ethers';
 
 const $ = (selector) => document.querySelector(selector);
@@ -725,7 +726,7 @@ $('#load-evidence').onclick = async () => {
   proofLoading = true; proofBundle = null; $('#evidence-note').textContent = ''; renderVerification(); renderBreakdown();
   try {
     if (!deployment.verifierUrl) throw new Error('No verifier service is configured. Reports remain blocked.');
-    const url = new URL('/proof', deployment.verifierUrl);
+    const url = new URL(verifierEndpoint(deployment.verifierUrl, 'proof'));
     if (deployment.chainId === 31337) {
       if (!['localhost', '127.0.0.1'].includes(location.hostname) || url.protocol !== 'http:' || !['localhost', '127.0.0.1'].includes(url.hostname)) throw new Error('Local evidence requires a loopback verifier.');
     } else if (url.protocol !== 'https:') throw new Error('External verification requires HTTPS.');

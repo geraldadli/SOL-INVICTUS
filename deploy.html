@@ -16,9 +16,17 @@
   <main class="container deploy-main">
     <div class="page-head"><div><div class="overline">One-time project setup</div><h1>Take your solar project online.</h1><div class="page-sub">Deploy Sol Invictus from your own wallet. No private key leaves your wallet.</div></div></div>
     <article class="card">
-      <h2>One wallet. One contract.</h2>
+      <h2>Version 4 · Verified reports and funding milestones</h2>
       <p>This wallet becomes the permanent solar operator and receives all 1,000 initial SURYA shares. Use a separate investor wallet to buy shares later.</p>
-      <p>Version 2 adds monthly reporting deadlines, an operator-controlled purchase pause, and zero-income reports. It starts a new project: balances and income from any older contract stay on that older contract.</p>
+      <p>A separate reviewer approves the 30% / 40% / 30% funding stages. Monthly reports require a signature from the hosted sample-data verifier and the exact income deposit. This starts a new project: older balances and income stay on the old contract.</p>
+      <p>The operator, reviewer, and verifier addresses are permanent. Keep the reviewer wallet accessible and back up the verifier signing key securely before deployment. Records are simulated; no real meter or utility is connected.</p>
+      <label class="field-label" for="reviewer">Milestone reviewer’s public wallet address</label>
+      <input class="input" id="reviewer" autocomplete="off" spellcheck="false" />
+      <label class="field-label" for="verifier">Hosted verifier’s public signing address</label>
+      <input class="input" id="verifier" autocomplete="off" spellcheck="false" />
+      <label class="field-label" for="verifier-url">Hosted verifier base URL (HTTPS)</label>
+      <input class="input" id="verifier-url" type="url" autocomplete="off" />
+      <p>Enter public addresses only. Never paste a seed phrase or private key here. The verifier must be online with a persistent key before deployment.</p>
       <p>The first report covers the previous completed UTC month and is due seven days after deployment. Later reports are due seven days after their month ends. Operator recovery is not included.</p>
       <p>You need free Sepolia test ETH for the deployment fee. Your wallet shows the fee before you confirm.</p>
       <p><a class="ext-link" href="https://ethereum.org/developers/docs/networks/#sepolia" target="_blank" rel="noopener noreferrer">Find a Sepolia faucet ↗</a></p>

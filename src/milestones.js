@@ -55,7 +55,7 @@ export function createMilestoneScreen({ $, esc, eth, getContext, transact, notif
   function render() {
     const { m, supported, operator, reviewer, local, address, wrong, busy } = context();
     $('#milestone-unavailable').hidden = Boolean(m);
-    $('#milestone-unavailable').textContent = supported ? 'Loading funding stages…' : 'Milestone funding controls are not active on this deployment. The local blockchain demo started with npm start supports this flow; the current Sepolia contract and browser simulation do not.';
+    $('#milestone-unavailable').textContent = supported ? 'Loading funding stages…' : 'Milestone funding controls are not active on this deployment. Use the version 4 Sepolia project or the local blockchain demo. Older contracts and the browser simulation do not support this flow.';
     $('#milestone-content').hidden = !m;
     if (!m) return;
     $('#milestone-role').textContent = operator ? 'You are the operator. Submit records for review.' : reviewer ? 'You are the milestone reviewer. Check the records before deciding.' : address ? 'You can view all funding stages and decisions.' : 'Connect a wallet to submit or review. Anyone can view progress.';

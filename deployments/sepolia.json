@@ -1,16 +1,59 @@
 {
-  "address": "0x1c854b9976f682db7f65AF5AeFB03d313d35038E",
+  "address": "0x7CF80f0C6F0e9D461d375EfF6d61857236FE270B",
   "operator": "0xaeEeC36568e5919ce3126ABde04285B90030F58b",
-  "contractVersion": 2,
+  "contractVersion": 4,
   "chainId": 11155111,
   "rpcUrl": "https://ethereum-sepolia-rpc.publicnode.com",
-  "blockNumber": 11876698,
-  "deploymentTransaction": "0xe925c1402033c7b1ef1c3b662d0b7e217dbe2f75ebee0798edb83964fc538ec4",
+  "blockNumber": 11877517,
+  "deploymentTransaction": "0x69dc6649e404b5f6c0c4c4eb3ec9e586e898b510f14727b872c3b4c2d599ca4c",
   "abi": [
     {
-      "inputs": [],
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "verifier",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "demo",
+          "type": "bool"
+        },
+        {
+          "internalType": "address",
+          "name": "reviewer",
+          "type": "address"
+        }
+      ],
       "stateMutability": "nonpayable",
       "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "ECDSAInvalidSignature",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "length",
+          "type": "uint256"
+        }
+      ],
+      "name": "ECDSAInvalidSignatureLength",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "s",
+          "type": "bytes32"
+        }
+      ],
+      "name": "ECDSAInvalidSignatureS",
+      "type": "error"
     },
     {
       "inputs": [
@@ -100,7 +143,23 @@
     },
     {
       "inputs": [],
+      "name": "InvalidShortString",
+      "type": "error"
+    },
+    {
+      "inputs": [],
       "name": "ReentrancyGuardReentrantCall",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "str",
+          "type": "string"
+        }
+      ],
+      "name": "StringTooLong",
       "type": "error"
     },
     {
@@ -126,6 +185,80 @@
         }
       ],
       "name": "Approval",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [],
+      "name": "EIP712DomainChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint8",
+          "name": "stage",
+          "type": "uint8"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint32",
+          "name": "revision",
+          "type": "uint32"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "evidenceHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "approved",
+          "type": "bool"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "name": "MilestoneReviewed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint8",
+          "name": "stage",
+          "type": "uint8"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint32",
+          "name": "revision",
+          "type": "uint32"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "evidenceHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "evidenceReference",
+          "type": "string"
+        }
+      ],
+      "name": "MilestoneSubmitted",
       "type": "event"
     },
     {
@@ -189,6 +322,43 @@
         }
       ],
       "name": "ReportPublished",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint32",
+          "name": "period",
+          "type": "uint32"
+        },
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "evidenceHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "verifier",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint8",
+          "name": "operatingStatus",
+          "type": "uint8"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "demo",
+          "type": "bool"
+        }
+      ],
+      "name": "ReportVerified",
       "type": "event"
     },
     {
@@ -275,6 +445,19 @@
     },
     {
       "inputs": [],
+      "name": "MAX_PROOF_LIFETIME",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "PROJECT_SHARES",
       "outputs": [
         {
@@ -294,6 +477,19 @@
           "internalType": "uint256",
           "name": "",
           "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "REPORT_TYPEHASH",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
         }
       ],
       "stateMutability": "view",
@@ -388,6 +584,32 @@
     },
     {
       "inputs": [],
+      "name": "approvedMilestones",
+      "outputs": [
+        {
+          "internalType": "uint8",
+          "name": "",
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "availableSaleProceeds",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "availableShares",
       "outputs": [
         {
@@ -472,6 +694,62 @@
     },
     {
       "inputs": [],
+      "name": "demoVerification",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "eip712Domain",
+      "outputs": [
+        {
+          "internalType": "bytes1",
+          "name": "fields",
+          "type": "bytes1"
+        },
+        {
+          "internalType": "string",
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "version",
+          "type": "string"
+        },
+        {
+          "internalType": "uint256",
+          "name": "chainId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "verifyingContract",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "salt",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "extensions",
+          "type": "uint256[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "isReportingOverdue",
       "outputs": [
         {
@@ -485,12 +763,77 @@
     },
     {
       "inputs": [],
+      "name": "lastOperatingStatus",
+      "outputs": [
+        {
+          "internalType": "uint8",
+          "name": "",
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "lastPeriod",
       "outputs": [
         {
           "internalType": "uint32",
           "name": "",
           "type": "uint32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "milestoneReviewer",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint8",
+          "name": "",
+          "type": "uint8"
+        }
+      ],
+      "name": "milestones",
+      "outputs": [
+        {
+          "internalType": "enum MilestoneSuryaShare.MilestoneStatus",
+          "name": "status",
+          "type": "uint8"
+        },
+        {
+          "internalType": "uint32",
+          "name": "revision",
+          "type": "uint32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "evidenceHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "string",
+          "name": "evidenceReference",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "reviewNote",
+          "type": "string"
         }
       ],
       "stateMutability": "view",
@@ -556,6 +899,33 @@
           "internalType": "uint256",
           "name": "reserveIdr",
           "type": "uint256"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint8",
+              "name": "operatingStatus",
+              "type": "uint8"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "evidenceHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "uint256",
+              "name": "validUntil",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bytes",
+              "name": "signature",
+              "type": "bytes"
+            }
+          ],
+          "internalType": "struct MilestoneSuryaShare.Proof",
+          "name": "proof",
+          "type": "tuple"
         }
       ],
       "name": "publishReport",
@@ -591,12 +961,44 @@
     },
     {
       "inputs": [],
+      "name": "releasedSaleProceeds",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "reportDueAt",
       "outputs": [
         {
           "internalType": "uint256",
           "name": "",
           "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint32",
+          "name": "",
+          "type": "uint32"
+        }
+      ],
+      "name": "reportEvidence",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
         }
       ],
       "stateMutability": "view",
@@ -667,6 +1069,39 @@
       "type": "function"
     },
     {
+      "inputs": [
+        {
+          "internalType": "uint8",
+          "name": "stage",
+          "type": "uint8"
+        },
+        {
+          "internalType": "uint32",
+          "name": "revision",
+          "type": "uint32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "evidenceHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bool",
+          "name": "approve",
+          "type": "bool"
+        },
+        {
+          "internalType": "string",
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "name": "reviewMilestone",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
       "inputs": [],
       "name": "saleProceeds",
       "outputs": [
@@ -688,6 +1123,29 @@
         }
       ],
       "name": "setPurchasesPaused",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint8",
+          "name": "stage",
+          "type": "uint8"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "evidenceHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "string",
+          "name": "evidenceReference",
+          "type": "string"
+        }
+      ],
+      "name": "submitMilestone",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -727,6 +1185,19 @@
     {
       "inputs": [],
       "name": "totalRevenue",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "totalSaleProceeds",
       "outputs": [
         {
           "internalType": "uint256",
@@ -805,10 +1276,26 @@
     },
     {
       "inputs": [],
+      "name": "trustedVerifier",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "withdrawSaleProceeds",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
     }
-  ]
+  ],
+  "verifierUrl": "https://22f29yfq.ap-southeast.insforge.app/functions/sol-verifier",
+  "verifier": "0x3fC2f326660fD33ed7879b6B1858471e44033ec9",
+  "milestoneReviewer": "0x0833738A169A9D2415bD3B7748d5D04B5eA63376"
 }

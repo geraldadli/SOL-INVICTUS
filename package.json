@@ -16,6 +16,8 @@
     "build": "npm run compile && vite build",
     "build:pages": "node scripts/build-pages.mjs",
     "connect:sepolia": "node scripts/connect-sepolia.mjs",
+    "prepare:remix": "node scripts/prepare-remix.mjs",
+    "build:verifier": "node scripts/build-verifier.mjs",
     "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort"
   },
   "dependencies": {

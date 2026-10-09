@@ -28,6 +28,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - run: node --test tests/deployment-settings.test.mjs tests/cloud-verifier.test.mjs
       - run: node --test tests/wallet-network.test.mjs
       - run: node --test tests/metamask.test.mjs
       - run: npm run test:simulation

@@ -1,11 +1,16 @@
 import { BrowserProvider, ContractFactory, formatEther } from 'ethers';
 import { ensureWalletNetwork } from './wallet-network.js';
 import { getMetaMaskProvider } from './metamask.js';
-import artifact from '../artifacts/SuryaShare.json';
+import artifact from '../artifacts/MilestoneSuryaShare.json';
+import setup from '../deployments/sepolia-setup.json';
+import { deploymentSettings, checkVerifierService } from './deployment-settings.js';
 
 const $ = selector => document.querySelector(selector);
-const pendingKey = 'suryashare.sepolia.deployment.v2';
+const pendingKey = 'solinvictus.sepolia.deployment.v4';
 let signer;
+$('#reviewer').value = setup.reviewer;
+$('#verifier').value = setup.verifier;
+$('#verifier-url').value = setup.verifierUrl;
 const message = error => error.code === 'ACTION_REJECTED' || error.code === 4001
   ? 'Cancelled in your wallet. No deployment was submitted.'
   : error.shortMessage || error.message;
@@ -54,8 +59,11 @@ $('#deploy').onclick = async () => {
     if (await signer.provider.send('eth_chainId', []) !== '0xaa36a7') throw new Error('Switch back to Sepolia and reconnect.');
     const accounts = await signer.provider.send('eth_accounts', []);
     if (accounts[0]?.toLowerCase() !== (await signer.getAddress()).toLowerCase()) throw new Error('Your account changed. Reconnect before deploying.');
+    const settings = deploymentSettings({ operator: await signer.getAddress(), reviewer: $('#reviewer').value.trim(), verifier: $('#verifier').value.trim(), verifierUrl: $('#verifier-url').value.trim() });
+    $('#status').textContent = 'Checking the hosted verifier before deployment…';
+    await checkVerifierService(settings);
     $('#status').textContent = 'Review the deployment fee and confirm in your wallet.';
-    const contract = await new ContractFactory(artifact.abi, artifact.bytecode, signer).deploy();
+    const contract = await new ContractFactory(artifact.abi, artifact.bytecode, signer).deploy(settings.verifier, true, settings.reviewer);
     const tx = contract.deploymentTransaction();
     submitted = true;
     showTransaction(tx.hash);
