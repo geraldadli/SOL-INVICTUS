@@ -70,7 +70,52 @@ For a browser simulation without a wallet or blockchain connection, run `npm run
 
 In the simulation's Operator lab, use **Advance past reporting deadline** to demonstrate blocked purchases, or **Advance to next report opening** to publish another month without waiting. These controls only change the simulation clock. Reloading preserves its clock, reports, and pause state.
 
-For local blockchain development, `npm start` launches a disposable Hardhat chain, deploys the contract, and starts the app. Restarting creates a fresh local demo.
+For local blockchain development, `npm start` launches a disposable Hardhat chain, a local automated verifier, the version 4 contract with milestone funding controls, and the app. Restarting creates a fresh local demo and a new verifier signing key. No additional user wallet is required. The browser-only `npm run demo` simulation continues to demonstrate version 2 accounting; it does not verify source evidence.
+
+## Automated evidence verification (local versions 3 and 4)
+
+The local contract requires an EIP-712 signature from its fixed, separate verifier before accepting any monthly report. The signature binds the chain, project contract, reporting month, generation, costs, reserve, exact test-ETH income, operating status, evidence fingerprint, and expiry. The report and deposit succeed together or both revert. Missing, expired, altered, or untrusted proofs cannot advance the reporting schedule. If no valid report arrives, the existing deadline blocks new purchases; claims and transfers remain available.
+
+1. Run `npm start`, connect an Alice demo wallet, and buy shares.
+2. Switch to the operator and open **Operator lab**.
+3. Select **Check monthly data**. The service reads its own source records; it accepts only the reporting month, never figures from the operator form.
+4. Review the populated figures and operating status. **Download supporting records** saves the source references, evidence fingerprint, and signature.
+5. Publish the report with its exact deposit. The project page independently reads chain events, transaction inputs, receipt, and contract balance to reconcile deposited, claimed, and reserved income.
+
+After publishing, the next monthly report stays closed until that month ends. The operator form shows the opening date. In the local blockchain demo, **Move demo to next reporting date** advances only the disposable chain's clock, preserving shares and earned income. Then select **Check monthly data** again. This control is unavailable on Sepolia and rechecks the network and demo contract before running.
+
+**Source limitation:** the included verifier uses synthetic meter, billing, expense, and reserve records, labeled as simulated onchain and in the interface. A signature proves approval by the configured verifier, not the truth of a physical reading. One designated verifier is still a trust dependency; a different address does not establish organizational independence. There is no real IoT, utility, bank, or auditor integration yet. A production adapter must authenticate those sources and reject missing or conflicting records. The current demo contract also assumes receipts equal generation multiplied by its fixed tariff; real billing that differs needs a revised revenue model.
+
+The local verifier binds to loopback and chain 31337, keeps an ephemeral signing key in memory, and refuses requests containing operator readings. It cannot be used as a public Sepolia verifier. Source credentials and signing keys must never be put in the frontend or Git repository.
+
+The verifier address is fixed in versions 3 and 4. Verifier outages prevent new proofs, and losing its key requires redeployment. Operator and verifier recovery are a separate next step; they are not implemented here. Issued proofs remain valid until their short expiry and cannot currently be revoked.
+
+The **public Sepolia deployment remains version 2**: its deposits can be checked onchain, but source evidence is not enforced. Versions 3 and 4 require a new deployment and a configured verifier service. `deploy.html` and `connect:sepolia` continue to target the existing version 2 workflow. The new evidence rules cannot be retrofitted into that immutable contract. Verification does not force external payments, recover an operator wallet, or introduce KYC. Version 4 adds the separate milestone approval flow described below.
+
+The income check uses the configured RPC, reads a consistent block, and reports confirmation count rather than claiming finality. It reconciles the complete report and claim event history against contract accounting, and validates the latest report's transaction and receipt. Unavailable or inconsistent chain data produces an unavailable check, never a verified status. Source approval and a deposit receipt are shown separately.
+
+## Milestone funding approvals (local version 4)
+
+Funding from share purchases starts locked. The operator submits a supporting statement, and a separate, fixed reviewer wallet approves or requests changes. The operator cannot approve its own request. Approval unlocks funding but does not transfer it; the operator must withdraw afterward.
+
+1. **Equipment purchase:** unlock 30% of money raised, after reviewing the purchase order and supplier quote.
+2. **Installation complete:** unlock another 40%, after reviewing installation and inspection records.
+3. **System handover:** unlock the final 30%, after reviewing commissioning and acceptance records.
+
+Percentages apply to actual funds raised, including purchases made after approval. They are cumulative (30%, 70%, 100%), not percentages of the remaining balance. Monthly income and unclaimed holder funds never enter this release allowance.
+
+To demonstrate it locally:
+
+1. Run `npm start`, connect Alice, and buy 100 Sol Coins (0.01 test ETH).
+2. Open **Project → View funding milestones → Use operator demo wallet**.
+3. Choose **Use labeled sample records**, read the statement, and **Submit for review**. Funding stays locked.
+4. Choose **Use reviewer demo wallet**. Read the submitted records and check the acknowledgment. Try **Request changes** with a reason: the operator must revise and resubmit, and funding stays locked.
+5. As the reviewer, approve the revised submission. The screen now shows 0.003 test ETH available, with 0.007 still locked. Approval identifies the exact submission revision and fingerprint.
+6. Switch to the operator, go to the Lab, and withdraw the approved funding. Repeat review for installation (another 0.004 test ETH) and handover (the final 0.003).
+
+The demo uses a fourth funded Hardhat account automatically; no additional real wallet is needed. These accounts are controlled on the same computer, so the demo illustrates role separation, not an authenticated independent auditor. Submitted statements are public onchain; use the clearly labeled fictional records. Their fingerprints identify text and do not authenticate real documents. Submission and review events preserve earlier revisions and decisions.
+
+The designated reviewer cannot be the operator or monthly data verifier. A real deployment needs an accountable independent reviewer and authenticated evidence. The reviewer is fixed: outages or key loss leave unapproved funds locked. Reviewer replacement, disputes, refunds, and operator recovery are not implemented. Previously released funds cannot be recalled. The public Sepolia contract and browser-only simulation do not enforce milestone approvals.
 
 ## Tests
 

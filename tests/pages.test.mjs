@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
 test('Pages connects to the verified Sepolia deployment without publishing deployment tools', () => {
@@ -30,6 +30,7 @@ test('Pages connects to the verified Sepolia deployment without publishing deplo
     }
   }
   assert.equal(existsSync('dist/deploy.html'), false);
+  assert.equal(readdirSync('dist').some(name => /^deployment-.*\.json$/.test(name)), false);
   const invalid = spawnSync(process.execPath, ['scripts/connect-sepolia.mjs', 'not-a-transaction'], { encoding: 'utf8' });
   assert.notEqual(invalid.status, 0);
   assert.match(invalid.stderr, /deployment transaction hash/);

@@ -2,8 +2,11 @@ import { createSimulation, demoAccounts } from './simulation.js';
 import { ensureWalletNetwork } from './wallet-network.js';
 import { getMetaMaskProvider } from './metamask.js';
 import { reportAmounts, utcPeriod } from './reporting.js';
+import { auditIncome, validateEvidence, operatingStatuses } from './verification.js';
+import { advanceLocalDemo, canAdvanceLocalDemo } from './local-demo-clock.js';
 import { createHomeWall } from './home-wall.js';
 import { createReveal, fadeInPage, initButtonRays, tick } from './motion.js';
+import { createMilestoneScreen, readMilestones } from './milestones.js';
 import { BrowserProvider, Contract, JsonRpcProvider, ZeroAddress, formatEther, getAddress, isAddress } from 'ethers';
 
 const $ = (selector) => document.querySelector(selector);
@@ -29,14 +32,18 @@ const isRejection = error => [error, error?.info?.error, error?.error].some(e =>
 let deployment, provider, contract, signer, address, walletName, accounts = [], state, loadError = '';
 let simulation, walletProvider, walletChainId, usingMetaMask = false, accountTarget, connectAttempt = 0, scanFrom, toastId = 0;
 let safeguards = false;
+let milestoneSupport = false;
+let verification = { required: false }, proofBundle, proofLoading = false, incomeAudit, auditError = '', auditRun = 0;
+let advancingDemoClock = false;
 const ui = { qty: '10', filter: 'All', busy: null, busyStage: null, modal: null, toasts: [] };
 const logCache = new Map(), blockTimes = new Map();
-const labels = ['Solar operator', 'Alice', 'Budi'];
+const labels = ['Solar operator', 'Alice', 'Budi', 'Milestone reviewer'];
 const onSepolia = () => deployment?.chainId === SEPOLIA;
 const hasDemoWallets = () => accounts.length > 0;
 const networkLabel = () => onSepolia() ? 'Sepolia' : 'the local chain';
 const switchLabel = () => `Switch to ${networkLabel()}`;
 const isOperator = () => Boolean(address && deployment && same(address, deployment.operator));
+const isMilestoneReviewer = () => same(address, state?.milestones?.reviewer);
 const wrongNetwork = () => Boolean(address && usingMetaMask && walletChainId !== deployment.chainId);
 const txUrl = hash => onSepolia() ? `https://sepolia.etherscan.io/tx/${hash}` : '';
 const balanceText = () => simulation ? idr(state.cash) : eth(state.ethBalance);
@@ -58,6 +65,21 @@ const reverts = {
   'Reporting month has not ended': 'This reporting month has not ended yet. Check the reporting opening time.',
 };
 
+const utcShort = timestamp => `${new Date(timestamp * 1000).toLocaleString('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })} UTC`;
+const utcDay = timestamp => new Date(timestamp * 1000).toLocaleDateString('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short' });
+const utcMonthStart = period => Date.UTC(Math.floor(period / 100), period % 100 - 1, 1) / 1000;
+const idrCompact = wei => { const n = Number(wei) / 1e9; return n >= 1e6 ? `Rp${(n / 1e6).toFixed(1)}M` : idr(n); };
+const greeting = () => { const hour = new Date().getHours(); return `Good ${hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'}, operator`; };
+function tween(el, to, format) {
+  const from = el._v ?? 0, reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  el._v = to;
+  cancelAnimationFrame(el._raf);
+  if (from === to || reduce) { el.textContent = format(to); return; }
+  const start = performance.now();
+  const tick = now => { const p = Math.min(1, (now - start) / 700); el.textContent = format(p === 1 ? to : from + (to - from) * (1 - (1 - p) ** 3)); if (p < 1) el._raf = requestAnimationFrame(tick); };
+  el._raf = requestAnimationFrame(tick);
+}
+const dayDelta = (timestamp, now) => { const days = Math.round(Math.abs(timestamp - now) / 86400); return days < 1 ? 'under a day' : `${days} day${days === 1 ? '' : 's'}`; };
 const utcDate = timestamp => `${new Date(timestamp * 1000).toLocaleString('en-GB', { timeZone: 'UTC' })} UTC`;
 async function readReportingStatus() {
   if (!safeguards) return { safeguards: false };
@@ -74,11 +96,16 @@ function renderReporting() {
     : state.statusUnavailable ? 'Reporting status unavailable — purchases disabled'
     : state.purchasesPaused && state.overdue ? 'Operator pause and overdue report'
     : state.purchasesPaused ? 'Purchases paused by operator' : state.overdue ? 'Report overdue — purchases blocked' : 'Reporting up to date';
-  const detail = state?.safeguards ? `<p>Last report: ${state.lastPeriod ? periodLabel(state.lastPeriod) : 'None yet'}. Next required: <strong>${periodLabel(state.nextReportingPeriod)}</strong>.</p><p>Reporting opens: ${utcDate(state.reportingOpensAt)}<br>Due by: ${utcDate(state.reportDueAt)}</p><p>Claims and transfers remain available. Reports are operator-supplied sample data.</p>` : '<p>Monthly deadlines and purchase pausing require a version 2 contract.</p>';
-  for (const id of ['reporting-status', 'operator-reporting-status']) $(`#${id}`).innerHTML = `<h2>${status}</h2>${detail}`;
+  const sourceNote = verification.required ? verification.demo ? 'Monthly figures must pass an automatic check using sample data.' : 'Monthly figures must be approved by the data-checking service.' : 'Monthly figures are supplied by the operator.';
+  const detail = state?.safeguards ? `<p>Last report: ${state.lastPeriod ? periodLabel(state.lastPeriod) : 'None yet'}. Next required: <strong>${periodLabel(state.nextReportingPeriod)}</strong>.</p><p>Reporting opens: ${utcDate(state.reportingOpensAt)}<br>Due by: ${utcDate(state.reportDueAt)}</p><p>Claims and transfers remain available. ${sourceNote}</p>` : '<p>Monthly deadlines and purchase pausing require a version 2 or later contract.</p>';
+  // The operator lab's #operator-reporting-status is drawn as a schedule by renderOperatorOverview().
+  $('#reporting-status').innerHTML = `<h2>${status}</h2>${detail}`;
   $('#reporting-controls').hidden = !state?.safeguards;
   $('#simulation-clock').hidden = !simulation;
-  setActionButton($('#pause-purchases'), 'pause', wrongNetwork() ? switchLabel() : state?.purchasesPaused ? 'Remove manual purchase pause' : 'Pause purchases', Boolean(state?.safeguards && isOperator() && !state.statusUnavailable));
+  const pauseSwitch = $('#pause-purchases');
+  pauseSwitch.setAttribute('aria-checked', String(!state?.purchasesPaused));
+  pauseSwitch.disabled = !(state?.safeguards && isOperator() && !state.statusUnavailable) || Boolean(ui.busy);
+  pauseSwitch.classList.toggle('is-busy', ui.busy === 'pause');
 }
 
 function errorMessage(error) {
@@ -123,7 +150,7 @@ function renderToasts() {
 }
 
 // Chain data as display items
-const tones = { Bought: ['BUY', 'Purchase'], Report: ['kWh', 'Monthly report'], Claimed: ['Rp', 'Claim'], Sent: ['OUT', 'Transfer'], Received: ['IN', 'Transfer'], Pause: ['II', 'Purchase controls'] };
+const tones = { Bought: ['BUY', 'Purchase'], Report: ['kWh', 'Monthly report'], Claimed: ['Rp', 'Claim'], Sent: ['OUT', 'Transfer'], Received: ['IN', 'Transfer'], Pause: ['II', 'Purchase controls'], Withdrawn: ['Rp', 'Withdrawal'] };
 const reports = () => (state?.logs ?? []).filter(log => log.name === 'ReportPublished').map(log => ({
   period: Number(log.args.period), kwh: Number(log.args.kwh), costs: Number(log.args.costsIdr), reserve: Number(log.args.reserveIdr),
   deposited: BigInt(log.args.deposited), hash: log.transactionHash, block: log.blockNumber,
@@ -134,6 +161,7 @@ function activity() {
     if (log.name === 'SharesPurchased') return { ...item, kind: 'Bought', mine: same(a.buyer, address), title: `${cap(nameFor(a.buyer))} bought ${plural(Number(a.shares), 'Sol Coin')}`, wei: BigInt(a.paid) };
     if (log.name === 'ReportPublished') return { ...item, kind: 'Report', mine: false, title: `${periodLabel(a.period)} report · ${fmt(a.kwh)} kWh`, wei: BigInt(a.deposited) };
     if (log.name === 'PurchasesPauseChanged') return { ...item, kind: 'Pause', mine: false, title: a.paused ? 'Operator paused purchases' : 'Operator removed manual pause' };
+    if (log.name === 'ProceedsWithdrawn') return { ...item, kind: 'Withdrawn', mine: false, title: 'Operator withdrew sale proceeds', wei: BigInt(a.amount) };
     if (log.name === 'RevenueClaimed') return { ...item, kind: 'Claimed', mine: same(a.holder, address), title: `${cap(nameFor(a.holder))} claimed income`, wei: BigInt(a.amount) };
     if (log.name === 'Transfer' && same(a.from, address)) return { ...item, kind: 'Sent', mine: true, title: `You sent ${plural(Number(a.value), 'Sol Coin')} to ${nameFor(a.to)}`, shares: Number(a.value) };
     if (log.name === 'Transfer' && same(a.to, address)) return { ...item, kind: 'Received', mine: true, title: `${cap(nameFor(a.from))} sent you ${plural(Number(a.value), 'Sol Coin')}`, shares: Number(a.value) };
@@ -176,7 +204,7 @@ function setActionButton(button, key, idle, enabled) {
 }
 function showPage() {
   if (location.hash === '#main-content') return;
-  const page = ['home', 'project', 'portfolio', 'how', 'operator'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'home';
+  const page = ['home', 'project', 'portfolio', 'how', 'operator', 'milestones'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'home';
   document.querySelectorAll('.page').forEach(section => { section.hidden = section.id !== `${page}-page`; });
   document.querySelectorAll('[data-page]').forEach(link => {
     link.classList.toggle('active', link.dataset.page === page);
@@ -188,7 +216,7 @@ function showPage() {
   if (page === 'how') lightHowSteps(); else stopHowSteps();
 }
 function render() {
-  renderHeader(); renderProject(); renderPortfolio(); renderOperator(); renderReporting(); renderMenu(); renderModal();
+  renderHeader(); renderProject(); renderPortfolio(); renderOperator(); renderReporting(); renderVerification(); renderMenu(); renderModal(); milestoneScreen.render();
   $('#home-sold').textContent = state ? fmt(1000 - state.available) : '—';
   const held = state && address && !isOperator() ? state.balance : 0;
   $('#home-mine').textContent = !state ? '—' : !address ? 'Not connected' : isOperator() ? 'Operator' : plural(held, 'coin');
@@ -336,18 +364,26 @@ function breakdown() {
   else if (!state.safeguards && dist <= 0) bad = 'This older contract requires positive distributable income.';
   else if (!(period > state.lastPeriod)) bad = 'This month is already reported. Pick a later month.';
   else if (BigInt(dist) * GWEI > state.ethBalance) bad = `This deposit is more than your ${simulation ? 'demo balance' : 'wallet'} holds (${balanceText()}).${onSepolia() ? ' Get more test ETH from a Sepolia faucet.' : ''}`;
+  if (!bad && verification.required) {
+    try {
+      validateEvidence(proofBundle, { ...deployment, ...verification, period, timestamp: state.timestamp });
+      if (proofBundle.evidence.kwh !== kwh || proofBundle.evidence.costsIdr !== costs || proofBundle.evidence.reserveIdr !== reserve) throw new Error('Report figures must match the verifier evidence.');
+    } catch (error) { bad = verificationMessage(error); }
+  }
   return { kwh, costs, reserve, receipts, dist, loss, period, ok: !bad, bad };
 }
 function renderBreakdown() {
   if (!state || !isOperator()) return;
-  const r = breakdown(), width = value => `${r.receipts > 0 ? Math.max(0, Math.min(100, value / r.receipts * 100)) : 0}%`;
+  const r = breakdown(), share = value => r.receipts > 0 ? Math.max(0, Math.min(100, value / r.receipts * 100)) : 0;
   $('#bd-receipts-note').textContent = `${fmt(r.kwh)} kWh × ${idr(TARIFF_IDR)}`;
   $('#bd-receipts').textContent = idr(r.receipts);
   $('#bd-costs').textContent = idr(r.costs);
   $('#bd-reserve').textContent = idr(r.reserve);
-  $('#bar-costs').style.width = width(r.costs);
-  $('#bar-reserve').style.width = width(r.reserve);
-  $('#bar-dist').style.width = width(Math.max(0, r.dist));
+  $('#bd-holders').textContent = idr(Math.max(0, r.dist));
+  const costsPct = share(r.costs), reservePct = Math.min(100 - costsPct, share(r.reserve));
+  $('#st-donut').style.setProperty('--a', `${costsPct}%`);
+  $('#st-donut').style.setProperty('--b', `${costsPct + reservePct}%`);
+  $('#st-pct').textContent = `${Math.round(share(Math.max(0, r.dist)))}%`;
   $('#bd-ok').hidden = !r.ok;
   $('#bd-bad').hidden = r.ok;
   $('#bd-bad').textContent = r.bad;
@@ -375,7 +411,6 @@ function renderOperator() {
     return;
   }
   if (!state) return;
-  $('#op-address').textContent = short(address);
   const base = state.safeguards ? state.nextReportingPeriod : state.lastPeriod ? nextPeriod(state.lastPeriod) : currentPeriod();
   const options = state.safeguards ? [base] : [base, nextPeriod(base), nextPeriod(nextPeriod(base))], select = $('#report-period');
   if (select.dataset.options !== options.join()) {
@@ -387,17 +422,94 @@ function renderOperator() {
   const all = reports(), last = all.at(-1);
   $('#last-published-note').textContent = last ? `Last published: ${periodLabel(last.period)}. Months must go in order.` : 'No reports yet. Start with your first month of production.';
   renderBreakdown();
+  renderQuickFill(last);
+  renderOperatorOverview(all);
+  $('#reports-count').textContent = all.length ? plural(all.length, 'report') : '';
+  const sum = key => all.reduce((total, r) => total + r[key], 0), sumDeposited = all.reduce((total, r) => total + r.deposited, 0n);
   $('#reports-table').innerHTML = all.length
-    ? `<div class="table-scroll"><table class="report-table"><thead><tr><th scope="col">Month</th><th scope="col">kWh</th><th scope="col">Receipts</th><th scope="col">Costs</th><th scope="col">Reserve</th><th scope="col">Distributed</th><th scope="col">Per Sol Coin</th><th scope="col"><span class="visually-hidden">Receipt</span></th></tr></thead><tbody>${all.reverse().map(r => `<tr><td>${periodLabel(r.period)}</td><td>${fmt(r.kwh)}</td><td>${idr(r.kwh * TARIFF_IDR)}</td><td>${idr(r.costs)}</td><td>${idr(r.reserve)}</td><td>${demoIdr(r.deposited)}</td><td>${demoIdr(r.deposited / 1000n)}</td><td>${receipt(r, `${periodLabel(r.period)} report`)}</td></tr>`).join('')}</tbody></table></div>`
+    ? `<div class="op-reports">${[...all].reverse().map(reportRow).join('')}</div>${all.length > 1 ? `<div class="op-total"><span>Total across ${plural(all.length, 'report')}</span><span><b>${fmt(sum('kwh'))} kWh</b> &nbsp;·&nbsp; <b>${demoIdr(sumDeposited)}</b> distributed</span></div>` : ''}`
     : `<div class="feed-empty"><div class="feed-empty-title">No reports yet</div><p>Your first monthly report will appear here once it's published. Shareholders can claim as soon as it confirms.</p></div>`;
-  const hasProceeds = state.proceeds > 0n;
-  $('#proceeds-rp').textContent = demoIdr(state.proceeds);
-  $('#proceeds-eth').textContent = eth(state.proceeds);
+  const available = state.milestones?.available ?? state.proceeds;
+  const hasProceeds = available > 0n;
+  $('#proceeds-rp').textContent = demoIdr(available);
+  $('#proceeds-eth').textContent = eth(available);
+  $('#proceeds-note').textContent = state.milestones ? `Approved funding available to withdraw. ${eth(state.milestones.held - available)} remains locked pending milestone approval.` : 'Funding received from Sol Coin purchases. This deployment has no milestone approval requirement.';
   setActionButton($('#withdraw-button'), 'withdraw', wrongNetwork() ? switchLabel() : hasProceeds ? 'Withdraw to operator wallet' : 'Nothing to withdraw', wrongNetwork() || hasProceeds);
+  const recent = activity().filter(item => item.kind in opIcons).slice(0, 6);
+  $('#op-feed').innerHTML = recent.length ? `<div>${recent.map(activityRow).join('')}</div>` : `<p class="card-text">Purchases, reports, claims and withdrawals will show up here.</p>`;
+}
+function reportRow(r) {
+  const receipts = r.kwh * TARIFF_IDR, pct = value => receipts > 0 ? Math.max(0, Math.min(100, value / receipts * 100)) : 0;
+  const costs = pct(r.costs), reserve = Math.min(100 - costs, pct(r.reserve)), holders = Math.min(100 - costs - reserve, pct(Number(r.deposited) / 1e9));
+  const year = Math.floor(r.period / 100), month = new Date(year, r.period % 100 - 1, 1).toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+  return `<div class="op-rep"><div class="op-cal" aria-hidden="true"><span>${month}</span><b>${String(year).slice(2)}</b></div>`
+    + `<div class="op-rep-t">${periodLabel(r.period)}<small>${fmt(r.kwh)} kWh</small></div>`
+    + `<div class="op-rep-bar"><div class="op-minibar" aria-hidden="true"><i style="width:${costs}%"></i><i style="width:${reserve}%"></i><i style="width:${holders}%"></i></div><div class="op-minibar-l">${Math.round(pct(Number(r.deposited) / 1e9))}% to shareholders</div></div>`
+    + `<div class="op-rep-amt">${demoIdr(r.deposited)}<small>${demoIdr(r.deposited / 1000n)} / coin</small></div>${receipt(r, `${periodLabel(r.period)} report`)}</div>`;
+}
+const opIcons = { Bought: 'i-sun', Report: 'i-doc', Claimed: 'i-check', Pause: 'i-chain', Withdrawn: 'i-wallet' };
+function activityRow(item) {
+  const url = txUrl(item.hash), tag = url ? `a href="${url}" target="_blank" rel="noopener noreferrer"` : 'div';
+  return `<${tag} class="op-act"><span class="op-act-ic k-${item.kind}"><svg class="icon" aria-hidden="true"><use href="#${opIcons[item.kind]}" /></svg></span><div class="op-act-t">${esc(item.title)}<small>${when(item)}</small></div>${item.wei === undefined ? '' : `<span class="op-act-v">${idrCompact(item.wei)}</span>`}</${url ? 'a' : 'div'}>`;
+}
+// Quick-fill chips for generation, based on the last published month.
+function renderQuickFill(last) {
+  const chips = $('#kwh-chips');
+  chips.hidden = !last;
+  if (!last) { chips.innerHTML = ''; return; }
+  const html = [[`Last month · ${fmt(last.kwh)}`, last.kwh], ['+5%', Math.round(last.kwh * 1.05)], ['−5%', Math.round(last.kwh * .95)]].map(([label, value]) => `<button type="button" data-kwh="${value}">${label}</button>`).join('');
+  if (chips.dataset.html !== html) { chips.innerHTML = html; chips.dataset.html = html; }
+}
+// Header, overview stats, reporting schedule and purchase state on the operator page.
+function renderOperatorOverview(all) {
+  const s = state, ok = s.safeguards && !s.statusUnavailable, waiting = ok && s.timestamp < s.reportingOpensAt;
+  const sold = TOTAL - s.available, buyers = new Set(s.logs.filter(log => log.name === 'SharesPurchased').map(log => String(log.args.buyer).toLowerCase())).size;
+  const month = s.safeguards ? periodLabel(s.nextReportingPeriod) : 'next';
+
+  $('#op-greeting').textContent = greeting();
+  $('#op-sub').innerHTML = !s.safeguards ? 'Publish a report once each production month has ended.'
+    : s.statusUnavailable ? 'Reporting status is unavailable. Refresh to try again.'
+    : s.overdue ? `Your <strong>${month}</strong> report is <strong>${dayDelta(s.reportDueAt, s.timestamp)}</strong> late. Purchases stay blocked until you publish it.`
+    : s.purchasesPaused ? `You've paused purchases. Claims and transfers still work.`
+    : waiting ? `Your ${month} report opens in <strong>${dayDelta(s.reportingOpensAt, s.timestamp)}</strong>. Everything else is running smoothly.`
+    : `Your ${month} report is ready to publish, due in <strong>${dayDelta(s.reportDueAt, s.timestamp)}</strong>.`;
+
+  tween($('#op-sold'), sold, fmt);
+  $('#op-cells').innerHTML = Array.from({ length: 25 }, (_, i) => `<i${i < Math.round(sold / 40) ? ' class="on"' : ''}></i>`).join('');
+  $('#op-sold-note').textContent = `${plural(buyers, 'investor')} · ${idr(sold * Number(SHARE_PRICE / GWEI))} raised`;
+  tween($('#op-income'), Number(s.revenue) / 1e9, idr);
+  const points = all.slice(-6).map(r => Number(r.deposited) / 1e9), low = Math.min(...points), span = Math.max(...points) - low;
+  const xy = points.map((v, i) => [i / (points.length - 1) * 120, span ? 26 - (v - low) / span * 22 : 15]);
+  $('#op-spark').innerHTML = points.length > 1
+    ? `<defs><linearGradient id="op-sg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#E95C05" stop-opacity=".28" /><stop offset="1" stop-color="#E95C05" stop-opacity="0" /></linearGradient></defs><path d="M${xy.map(p => p.join(' ')).join(' L')} L120 30 L0 30Z" fill="url(#op-sg)" /><path d="M${xy.map(p => p.join(' ')).join(' L')}" fill="none" stroke="#E95C05" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />`
+    : '<path d="M0 22 L120 22" fill="none" stroke="#E6C9B4" stroke-width="2" stroke-dasharray="3 5" stroke-linecap="round" vector-effect="non-scaling-stroke" />';
+  $('#op-income-note').textContent = all.length ? `${plural(all.length, 'report')} · ${demoIdr(all.at(-1).deposited / 1000n)} per Sol Coin latest` : 'No reports published yet';
+  tween($('#op-held'), Number(s.proceeds) / 1e9, idr);
+  $('#op-held-note').textContent = s.proceeds > 0n ? `Ready to withdraw · ${eth(s.proceeds)}` : 'Nothing waiting';
+
+  const [tone, label] = !s.safeguards ? ['muted', 'Not tracked'] : s.statusUnavailable ? ['bad', 'Unavailable']
+    : s.overdue ? ['bad', 'Overdue'] : s.purchasesPaused ? ['warn', 'Paused'] : ['ok', 'On track'];
+  $('#op-state').dataset.tone = tone;
+  $('#op-state-text').textContent = label;
+  const progress = ok ? Math.max(0, Math.min(1, (s.timestamp - s.reportingOpensAt) / (s.reportDueAt - s.reportingOpensAt))) : 0;
+  $('#op-track-fill').style.width = `${progress * 100}%`;
+  $('#op-track-dot').style.left = `${progress * 100}%`;
+  $('#op-track-open').textContent = ok ? `Opens ${utcDay(s.reportingOpensAt)}` : '';
+  $('#op-track-due').textContent = ok ? `Due ${utcDay(s.reportDueAt)}` : '';
+  $('#report-window-note').textContent = !ok ? '' : waiting ? `Opens ${utcShort(s.reportingOpensAt)}` : `Due ${utcShort(s.reportDueAt)}`;
+
+  const step = (cls, title, note, time, mark = '') => `<li class="${cls}"><span class="sched-dot">${mark}</span><div><h3>${title}</h3><p>${note}</p></div><time>${time}</time></li>`;
+  $('#operator-reporting-status').innerHTML = s.safeguards
+    ? `<ol class="sched">${s.lastPeriod ? step('done', `${periodLabel(s.lastPeriod)} report`, 'Published and claimable', 'Done', '<svg class="icon" aria-hidden="true"><use href="#i-check" /></svg>') : ''}`
+      + step(s.overdue ? 'late' : 'now', `${month} report`, s.overdue ? `${dayDelta(s.reportDueAt, s.timestamp)} overdue` : waiting ? `Opens in ${dayDelta(s.reportingOpensAt, s.timestamp)}` : `Open now · due in ${dayDelta(s.reportDueAt, s.timestamp)}`, utcDay(waiting ? s.reportingOpensAt : s.reportDueAt))
+      + step('', `${periodLabel(nextPeriod(s.nextReportingPeriod))} report`, 'Opens after the month ends', utcDay(utcMonthStart(nextPeriod(nextPeriod(s.nextReportingPeriod))))) + '</ol>'
+    : '<p class="card-text">Monthly deadlines and purchase pausing require a version 2 contract.</p>';
+  $('#purchase-state').textContent = s.purchasesPaused ? 'Purchases paused' : s.overdue ? 'Purchases blocked' : 'Accepting purchases';
+  $('#purchase-state-note').textContent = s.purchasesPaused ? 'Paused by you. Claims still work.' : s.overdue ? 'Report overdue. Publish it to reopen sales.' : 'Investors can buy Sol Coins.';
 }
 function renderMenu() {
   if (!address) { closeMenu(); return; }
-  const role = isOperator() ? 'Operator' : 'Investor';
+  const role = isOperator() ? 'Operator' : isMilestoneReviewer() ? 'Milestone reviewer' : 'Investor';
   $('#menu-role').textContent = usingMetaMask ? `${role} wallet` : `${walletName} · ${role.toLowerCase()} wallet`;
   $('#menu-address').textContent = address;
   $('#menu-balance').textContent = state ? balanceText() : '—';
@@ -416,6 +528,7 @@ function renderModal() {
 }
 function renderWalletOptions() {
   const options = hasDemoWallets() ? [[1, 'Alice', 'Demo investor', 'A', 'tone-maroon'], [2, 'Budi', 'Demo investor', 'B', 'tone-crimson'], [0, 'Solar operator', 'Run the income demo', 'S', 'tone-ink']] : [];
+  if (milestoneSupport && accounts.length > 3) options.push([3, 'Milestone reviewer', 'Review funding stages · demo', 'R', 'tone-ink']);
   if (!simulation) options.push(['metamask', 'MetaMask', 'Browser extension', 'M', '']);
   $('#wallet-options').innerHTML = options.map(([id, name, hint, letter, tone]) => `<button type="button" class="wallet-option" data-wallet="${id}"><span class="wallet-letter ${tone}" aria-hidden="true">${letter}</span><span class="wallet-option-text"><strong>${name}</strong><small>${hint}</small></span><svg class="icon" aria-hidden="true"><use href="#i-next" /></svg></button>`).join('');
 }
@@ -666,13 +779,14 @@ async function refresh() {
   }
   if (!contract) return;
   const currentAddress = address;
-  const [latest, available, revenue, lastPeriod, proceeds, balance, claimable, claimed, ethBalance, rawLogs, reporting] = await Promise.all([
+  const [latest, available, revenue, lastPeriod, proceeds, balance, claimable, claimed, ethBalance, rawLogs, reporting, milestones] = await Promise.all([
     provider.getBlockNumber(), contract.availableShares(), contract.totalRevenue(), contract.lastPeriod(), contract.saleProceeds(),
     currentAddress ? contract.balanceOf(currentAddress) : 0n, currentAddress ? contract.claimable(currentAddress) : 0n,
     currentAddress ? contract.totalClaimed(currentAddress) : 0n, currentAddress ? provider.getBalance(currentAddress) : 0n,
     // ponytail: after one full scan, rescans only a short overlap of recent blocks; use a dedicated indexer for long-lived projects.
     provider.getLogs({ address: deployment.address, fromBlock: scanFrom ?? deployment.blockNumber, toBlock: 'latest' }),
     readReportingStatus(),
+    milestoneSupport ? readMilestones(contract, provider) : null,
   ]);
   for (const log of rawLogs) logCache.set(`${log.transactionHash}:${log.index}`, { ...log, ...contract.interface.parseLog(log) });
   scanFrom = Math.max(deployment.blockNumber, latest - 50);
@@ -680,11 +794,107 @@ async function refresh() {
   const parsed = [...logCache.values()].sort((a, b) => a.blockNumber - b.blockNumber || a.index - b.index);
   const purchases = new Set(parsed.filter(log => log.name === 'SharesPurchased').map(log => log.transactionHash));
   const logs = parsed.filter(log => log.name === 'Transfer' ? log.args.from !== ZeroAddress && !purchases.has(log.transactionHash) : log.name !== 'Approval');
-  state = { ...reporting, available: Number(available), revenue, lastPeriod: Number(lastPeriod), proceeds, balance: Number(balance), claimable, claimed, ethBalance, logs };
+  state = { ...reporting, milestones, available: Number(available), revenue, lastPeriod: Number(lastPeriod), proceeds, balance: Number(balance), claimable, claimed, ethBalance, logs };
   loadError = '';
   render();
   loadBlockTimes(logs);
+  refreshIncomeAudit();
 }
+
+function verificationMessage(error) {
+  const message = error?.message ?? '';
+  if (message === 'Load verifier evidence before publishing this report.') return 'Click “Check monthly data” before publishing.';
+  if (/expired|expiry|too long/i.test(message)) return 'This data check has expired. Click “Check monthly data” again.';
+  if (/another chain|another reporting month|source mode/.test(message)) return 'These records do not match this project or month. Check the monthly data again.';
+  if (/signed|signature|do not match|must match|own verifier/.test(message)) return 'These figures could not be approved. Check the monthly data again before publishing.';
+  if (/not ended/.test(message)) return 'This month is not finished yet. Check again after the reporting opening date.';
+  if (/No source records/.test(message)) return 'There are no source records for this month yet. Publishing is paused until they are available.';
+  if (/No verifier service|loopback|HTTPS/.test(message)) return 'The data-checking service is not set up for this project. Publishing is paused until it is connected.';
+  return 'The data check could not finish. Please try again. You cannot publish until the check passes.';
+}
+function renderVerification() {
+  const title = simulation ? 'Practice demo' : verification.required
+    ? verification.demo ? 'Automatic checks · sample data' : 'Automatic report checks'
+    : 'Operator figures · not independently checked';
+  const explanation = simulation ? 'This demo lets you practise buying shares and sharing income. It does not check real records or send blockchain payments.'
+    : verification.required ? `Before a report can be published, the checking service must approve its figures. The operator must send the exact income amount with the report.${verification.demo ? ' This demo uses made-up records and test money. It does not confirm real electricity production or earnings.' : ' These checks depend on the checking service and the records it uses.'}`
+    : 'The operator supplies the generation, cost and maintenance figures. This version checks payments, but does not require an independent check of those figures.';
+  let funds = simulation ? '' : `<p>${auditError ? 'We could not check the payments right now. Try refreshing the page.' : !incomeAudit ? 'Checking payments and income held for share owners…' : `<strong>Income received:</strong> ${eth(incomeAudit.deposited)}<br><strong>Already paid to share owners:</strong> ${eth(incomeAudit.claimed)}<br><strong>Still held for share owners to claim:</strong> ${eth(incomeAudit.reserved)}`}</p>`;
+  if (!auditError && incomeAudit?.latest) {
+    const r = incomeAudit.latest;
+    funds += `<p><strong>${periodLabel(r.period)}:</strong> ${r.amount === 0n ? 'No payment was needed based on this report’s figures' : `The full reported income of ${eth(r.amount)} was received`}. ${onSepolia() ? `<a href="${txUrl(r.hash)}" target="_blank" rel="noopener noreferrer">View payment ↗</a>` : ''}</p>`;
+  } else if (!auditError && incomeAudit) funds += '<p>No monthly income report has been published yet.</p>';
+  const verified = state?.logs?.filter(log => log.name === 'ReportVerified').at(-1);
+  const status = verified ? `<p>Project status in the ${periodLabel(verified.args.period)} report: <strong>${operatingStatuses[Number(verified.args.operatingStatus)] ?? 'Unknown'}</strong>.</p>` : '';
+  const technical = `${verification.required ? `<p>The contract checks the verifier’s digital signature, the reporting month, the figures, and the exact payment amount. Verifier address: <code class="evidence-hash">${esc(verification.verifier)}</code>.</p>` : ''}${verified ? `<p>Record identifier: <code class="evidence-hash">${esc(verified.args.evidenceHash)}</code>. This lets reviewers check that the records have not changed.</p>` : ''}${!simulation ? `<p>We compare blockchain transactions and receipts with the report, and check that the contract still holds unpaid income separately from share-sale proceeds. A matching payment does not prove that the project earned real revenue.</p>${incomeAudit && !auditError ? `<p>Checked at block ${fmt(incomeAudit.blockNumber)}.${incomeAudit.latest ? ` The latest report has ${incomeAudit.latest.confirmations} block confirmation${incomeAudit.latest.confirmations === 1 ? '' : 's'}; this is not a guarantee of finality.` : ''}</p>` : ''}${auditError ? `<p>Check details: ${esc(auditError)}</p>` : ''}` : '<p>Run the local blockchain demo with npm start to try the automatic data and payment checks.</p>'}`;
+  const html = `<h2>${title}</h2><p>${esc(explanation)}</p>${status}${funds}<p class="field-help">Late reports pause new purchases. You can still claim income already received and send your shares.</p>`;
+  for (const id of ['verification-panel', 'operator-verification']) {
+    const panel = $(`#${id}`), expanded = panel.querySelector('details')?.open;
+    panel.innerHTML = `${html}<details${expanded ? ' open' : ''}><summary>How this is checked</summary>${technical}</details>`;
+  }
+  $('#proof-controls').hidden = !verification.required;
+  const waitingForMonth = Boolean(state && state.timestamp < state.reportingOpensAt);
+  $('#load-evidence').disabled = proofLoading || advancingDemoClock || Boolean(ui.busy) || !state || !isOperator() || waitingForMonth;
+  $('#load-evidence').textContent = proofLoading ? 'Checking monthly data…' : 'Check monthly data';
+  $('#report-opening-note').hidden = !waitingForMonth;
+  $('#report-opening-note').textContent = waitingForMonth ? `${periodLabel(state.nextReportingPeriod)} is still in progress. You can check its monthly data from ${utcDate(state.reportingOpensAt)}.${state.lastPeriod ? ` ${periodLabel(state.lastPeriod)} has already been published.` : ''}` : '';
+  const localClock = verification.required && verification.demo && canAdvanceLocalDemo(deployment, location.hostname);
+  $('#local-report-clock').hidden = !localClock || !waitingForMonth;
+  $('#advance-local-report').disabled = advancingDemoClock || proofLoading || Boolean(ui.busy) || !isOperator();
+  $('#advance-local-report').textContent = advancingDemoClock ? 'Moving demo date…' : 'Move demo to next reporting date';
+  $('#download-evidence').hidden = !proofBundle;
+  for (const id of ['report-kwh', 'report-costs', 'report-reserve']) $(`#${id}`).readOnly = verification.required;
+}
+async function refreshIncomeAudit() {
+  if (simulation || !contract) return;
+  const run = ++auditRun;
+  incomeAudit = null; auditError = ''; renderVerification();
+  try { const result = await auditIncome(provider, deployment); if (run === auditRun) incomeAudit = result; }
+  catch (error) { if (run === auditRun) auditError = errorMessage(error); }
+  if (run === auditRun) renderVerification();
+}
+$('#load-evidence').onclick = async () => {
+  if (!verification.required || proofLoading || advancingDemoClock || ui.busy || !state) return;
+  proofLoading = true; proofBundle = null; $('#evidence-note').textContent = ''; renderVerification(); renderBreakdown();
+  try {
+    if (!deployment.verifierUrl) throw new Error('No verifier service is configured. Reports remain blocked.');
+    const url = new URL('/proof', deployment.verifierUrl);
+    if (deployment.chainId === 31337) {
+      if (!['localhost', '127.0.0.1'].includes(location.hostname) || url.protocol !== 'http:' || !['localhost', '127.0.0.1'].includes(url.hostname)) throw new Error('Local evidence requires a loopback verifier.');
+    } else if (url.protocol !== 'https:') throw new Error('External verification requires HTTPS.');
+    url.searchParams.set('period', String(state.nextReportingPeriod));
+    const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(15000) });
+    const bundle = await response.json();
+    if (!response.ok) throw new Error(bundle.error || 'Verifier unavailable.');
+    const block = await provider.getBlock('latest');
+    validateEvidence(bundle, { ...deployment, ...verification, period: state.nextReportingPeriod, timestamp: block.timestamp });
+    proofBundle = bundle;
+    $('#report-kwh').value = String(bundle.evidence.kwh);
+    $('#report-costs').value = String(bundle.evidence.costsIdr);
+    $('#report-reserve').value = String(bundle.evidence.reserveIdr);
+    $('#evidence-note').textContent = `${periodLabel(bundle.evidence.period)}: data check passed. Project status: ${operatingStatuses[bundle.evidence.operatingStatus]}. You can publish using these figures until ${utcDate(bundle.statement.validUntil)}. ${bundle.evidence.sourceKind === 'simulated' ? 'These are sample records for the demo.' : 'You can download the supporting records below.'}`;
+    await refresh();
+  } catch (error) { $('#evidence-note').textContent = verificationMessage(error); }
+  finally { proofLoading = false; renderVerification(); renderBreakdown(); }
+};
+$('#advance-local-report').onclick = async () => {
+  if (advancingDemoClock || proofLoading || ui.busy || !isOperator() || !verification.demo) return;
+  advancingDemoClock = true; renderVerification();
+  try {
+    await advanceLocalDemo(deployment, location.hostname);
+    proofBundle = null;
+    $('#evidence-note').textContent = 'The demo month has ended. Click “Check monthly data” to continue.';
+    await refresh();
+    info('Demo reporting is open', 'Your demo shares and earned income are unchanged. You can now check the next month’s data.');
+  } catch (error) { notify(error, 'Could not move the demo date'); }
+  finally { advancingDemoClock = false; renderVerification(); renderBreakdown(); }
+};
+$('#download-evidence').onclick = () => {
+  if (!proofBundle) return;
+  const url = URL.createObjectURL(new Blob([JSON.stringify(proofBundle, null, 2)], { type: 'application/json' }));
+  const a = document.createElement('a'); a.href = url; a.download = `evidence-${proofBundle.evidence.period}.json`; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
 async function loadBlockTimes(logs) {
   const mine = logs.filter(log => Object.values(log.args).some(value => typeof value === 'string' && same(value, address)));
   const missing = [...new Set([...logs.slice(-40), ...mine.slice(-20)].map(log => log.blockNumber))].filter(block => !blockTimes.has(block));
@@ -941,18 +1151,25 @@ $('#report-form').oninput = event => {
   if (event.target.matches('input')) event.target.value = digits(event.target.value, 10);
   renderBreakdown();
 };
+$('#kwh-chips').onclick = event => {
+  const chip = event.target.closest('[data-kwh]');
+  if (!chip) return;
+  $('#report-kwh').value = chip.dataset.kwh;
+  $('#report-form').dispatchEvent(new Event('input'));
+};
 $('#report-form').onsubmit = event => {
   event.preventDefault();
   if (wrongNetwork()) { openModal('wrong'); return; }
   if (!state || !isOperator()) return;
   const r = breakdown();
   if (!r.ok) return;
-  transact('publish', `Publish ${periodLabel(r.period)} report`, c => c.publishReport(r.period, r.kwh, r.costs, r.reserve, { value: BigInt(r.dist) * GWEI }),
+  const proof = verification.required ? validateEvidence(proofBundle, { ...deployment, ...verification, period: r.period, timestamp: state.timestamp }) : null;
+  transact('publish', `Publish ${periodLabel(r.period)} report`, c => c.publishReport(r.period, r.kwh, r.costs, r.reserve, ...(proof ? [proof] : []), { value: BigInt(r.dist) * GWEI }),
     () => `${idr(r.dist)} is now claimable by shareholders, ${idr(r.dist / 1000)} per Sol Coin.`);
 };
 $('#withdraw-button').onclick = () => {
   if (wrongNetwork()) { openModal('wrong'); return; }
-  const amount = state?.proceeds ?? 0n;
+  const amount = state?.milestones?.available ?? state?.proceeds ?? 0n;
   if (!amount || !isOperator()) return;
   transact('withdraw', `Withdraw ${demoIdr(amount)}`, c => c.withdrawSaleProceeds(), () => `${demoIdr(amount)} (${eth(amount)}) was sent to the operator wallet.`);
 };
@@ -973,6 +1190,9 @@ window.addEventListener('hashchange', showPage);
 // Pick up purchases, reports and claims made by other wallets.
 setInterval(() => { if (contract && !document.hidden && !ui.busy) refresh().catch(() => {}); }, 30000);
 document.addEventListener('visibilitychange', () => { if (contract && !document.hidden && !ui.busy) refresh().catch(() => {}); });
+const milestoneScreen = createMilestoneScreen({ $, esc, eth, transact, notify, setActionButton, chooseWallet,
+  getContext: () => ({ state, address, supported: milestoneSupport, operator: isOperator(), reviewer: isMilestoneReviewer(),
+    local: milestoneSupport && hasDemoWallets() && ['localhost', '127.0.0.1'].includes(location.hostname), wrong: wrongNetwork(), busy: ui.busy }) });
 showPage(); renderWalletOptions(); render();
 
 async function initialize() {
@@ -986,7 +1206,7 @@ async function initialize() {
     return;
   }
   try {
-    const response = await fetch(`${import.meta.env.BASE_URL}deployment.json`, { cache: 'no-store' });
+    const response = await fetch(`${import.meta.env.BASE_URL}${import.meta.env.VITE_DEPLOYMENT_FILE || 'deployment.json'}`, { cache: 'no-store' });
     if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) throw new Error('Deployment configuration is missing.');
     deployment = await response.json();
     if (![31337, SEPOLIA].includes(deployment.chainId)) throw new Error('This app only supports local Ethereum or Sepolia.');
@@ -998,8 +1218,11 @@ async function initialize() {
     if (await provider.getCode(deployment.address) === '0x') throw new Error('The node restarted. Run npm run deploy to create a new demo contract.');
     contract = new Contract(deployment.address, deployment.abi, provider);
     deployment.operator = await contract.operator();
-    safeguards = contract.interface.hasFunction('CONTRACT_VERSION') && Number(await contract.CONTRACT_VERSION()) === 2;
-    if (deployment.chainId === 31337) accounts = (await provider.listAccounts()).slice(0, 3).map(account => account.address);
+    const version = contract.interface.hasFunction('CONTRACT_VERSION') ? Number(await contract.CONTRACT_VERSION()) : 1;
+    safeguards = [2, 3, 4].includes(version);
+    milestoneSupport = version === 4;
+    if ([3, 4].includes(version)) verification = { required: true, verifier: await contract.trustedVerifier(), demo: await contract.demoVerification() };
+    if (deployment.chainId === 31337) accounts = (await provider.listAccounts()).slice(0, milestoneSupport ? 4 : 3).map(account => account.address);
     applyMode();
     await refresh();
   } catch (error) {

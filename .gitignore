@@ -7,3 +7,4 @@ work/
 .env.*
 !.env.example
 public/deployment.json
+public/deployment-*.json
