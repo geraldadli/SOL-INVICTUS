@@ -45,7 +45,9 @@ export function createMilestoneScreen({ $, esc, eth, getContext, transact, notif
     const { m, reviewer } = context();
     if (!m || !reviewer || !$('#milestone-review-confirm').checked) return;
     const stage = m.approved, row = m.rows[stage], note = $('#milestone-review-note').value.trim();
-    if (toUtf8Bytes(note).length > 280 || (!approve && !note)) return notify(new Error('Explain the changes needed in 1–280 bytes.'));
+    const problem = !approve && !note ? 'Write a review note explaining what the operator should change, then click Request changes again.'
+      : toUtf8Bytes(note).length > 280 ? 'The review note is too long. Shorten it to 280 bytes (emoji and accented letters count as more than one).' : '';
+    if (problem) { $('#milestone-review-note').focus(); return notify(new Error(problem), 'Review note needed'); }
     transact('milestone-review', approve ? `Approve ${milestoneNames[stage]}` : 'Request changes',
       c => c.reviewMilestone(stage, row.revision, row.hash, approve, note),
       () => approve ? 'Approved. The operator can withdraw the newly available funding.' : 'Changes requested. This stage’s funding stays locked.');
