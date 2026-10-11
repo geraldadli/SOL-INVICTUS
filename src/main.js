@@ -9,6 +9,7 @@ import { createHomeWall } from './home-wall.js';
 import { createReveal, fadeInPage, initButtonRays, tick } from './motion.js';
 import { createMilestoneScreen, readMilestones } from './milestones.js';
 import { verifierEndpoint } from './deployment-settings.js';
+import { getLogsInRange } from './logs.js';
 import { BrowserProvider, Contract, JsonRpcProvider, ZeroAddress, formatEther, getAddress, isAddress } from 'ethers';
 
 const $ = (selector) => document.querySelector(selector);
@@ -798,12 +799,13 @@ async function refresh() {
   }
   if (!contract) return;
   const currentAddress = address;
-  const [latest, available, revenue, lastPeriod, proceeds, balance, claimable, claimed, ethBalance, rawLogs, reporting, milestones] = await Promise.all([
-    provider.getBlockNumber(), contract.availableShares(), contract.totalRevenue(), contract.lastPeriod(), contract.saleProceeds(),
+  const latest = await provider.getBlockNumber();
+  const [available, revenue, lastPeriod, proceeds, balance, claimable, claimed, ethBalance, rawLogs, reporting, milestones] = await Promise.all([
+    contract.availableShares(), contract.totalRevenue(), contract.lastPeriod(), contract.saleProceeds(),
     currentAddress ? contract.balanceOf(currentAddress) : 0n, currentAddress ? contract.claimable(currentAddress) : 0n,
     currentAddress ? contract.totalClaimed(currentAddress) : 0n, currentAddress ? provider.getBalance(currentAddress) : 0n,
     // ponytail: after one full scan, rescans only a short overlap of recent blocks; use a dedicated indexer for long-lived projects.
-    provider.getLogs({ address: deployment.address, fromBlock: scanFrom ?? deployment.blockNumber, toBlock: 'latest' }),
+    getLogsInRange(provider, { address: deployment.address }, scanFrom ?? deployment.blockNumber, latest),
     readReportingStatus(),
     milestoneSupport ? readMilestones(contract, provider) : null,
   ]);

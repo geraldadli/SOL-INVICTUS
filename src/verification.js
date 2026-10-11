@@ -1,4 +1,5 @@
 import { Contract, Interface, getAddress, keccak256, toUtf8Bytes, verifyTypedData } from 'ethers';
+import { getLogsInRange } from './logs.js';
 
 export const REPORT_TYPES = { VerifiedReport: [
   ['period', 'uint32'], ['kwh', 'uint256'], ['costsIdr', 'uint256'], ['reserveIdr', 'uint256'],
@@ -63,7 +64,7 @@ export async function auditIncome(provider, deployment) {
   const at = { blockTag: block.number };
   const [revenue, proceeds, balance, operator, events] = await Promise.all([
     contract.totalRevenue(at), contract.saleProceeds(at), provider.getBalance(deployment.address, block.number), contract.operator(at),
-    provider.getLogs({ address: deployment.address, fromBlock: deployment.blockNumber, toBlock: block.number }),
+    getLogsInRange(provider, { address: deployment.address }, deployment.blockNumber, block.number),
   ]);
   const logs = events.map(log => ({ ...log, parsed: iface.parseLog(log) }));
   const reports = logs.filter(log => log.parsed?.name === 'ReportPublished');
