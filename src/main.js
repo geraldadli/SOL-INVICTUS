@@ -964,7 +964,8 @@ async function transact(key, title, action, success, onConfirmed) {
     ui.busyStage = 'pending';
     patchToast(id, { status: 'pending', body: `Sent to ${networkLabel()}. This usually takes 10 to 20 seconds.`, hash: tx.hash });
     render();
-    const receipt = await tx.wait();
+    // The wallet's RPC can stall long after the transaction is mined; also watch through the app's own RPC.
+    const receipt = await Promise.any([tx.wait(), provider.waitForTransaction(tx.hash)]).catch(error => { throw error.errors?.[0] ?? error; });
     if (receipt.status !== 1) throw new Error('The transaction reverted.');
     ui.busy = null;
     onConfirmed?.();
