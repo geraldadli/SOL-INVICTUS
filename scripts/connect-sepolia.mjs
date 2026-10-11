@@ -5,7 +5,7 @@ import { deploymentSettings, verifyCreationData, checkVerifierService } from '..
 
 const hash = process.argv[2];
 if (!/^0x[\da-f]{64}$/i.test(hash ?? '')) throw new Error('Usage: npm run connect:sepolia -- <deployment transaction hash>');
-const rpcUrl = process.env.PUBLIC_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
+const rpcUrl = process.env.PUBLIC_RPC_URL || 'https://sepolia.gateway.tenderly.co';
 if (new URL(rpcUrl).protocol !== 'https:') throw new Error('A public HTTPS RPC is required.');
 const provider = new JsonRpcProvider(rpcUrl);
 try {

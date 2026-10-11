@@ -3,7 +3,7 @@
   "operator": "0xaeEeC36568e5919ce3126ABde04285B90030F58b",
   "contractVersion": 4,
   "chainId": 11155111,
-  "rpcUrl": "https://ethereum-sepolia-rpc.publicnode.com",
+  "rpcUrl": "https://sepolia.gateway.tenderly.co",
   "blockNumber": 11877517,
   "deploymentTransaction": "0x69dc6649e404b5f6c0c4c4eb3ec9e586e898b510f14727b872c3b4c2d599ca4c",
   "abi": [
