@@ -5,8 +5,12 @@ import { deploymentSettings, verifyCreationData, checkVerifierService } from '..
 
 const hash = process.argv[2];
 if (!/^0x[\da-f]{64}$/i.test(hash ?? '')) throw new Error('Usage: npm run connect:sepolia -- <deployment transaction hash>');
-const rpcUrl = process.env.PUBLIC_RPC_URL || 'https://sepolia.gateway.tenderly.co';
-if (new URL(rpcUrl).protocol !== 'https:') throw new Error('A public HTTPS RPC is required.');
+// Keep the published RPCs across redeploys unless overridden. The logs RPC must serve full event history.
+let previous = {};
+try { previous = JSON.parse(readFileSync('deployments/sepolia.json', 'utf8')); } catch {}
+const rpcUrl = process.env.PUBLIC_RPC_URL || previous.rpcUrl || 'https://sepolia.gateway.tenderly.co';
+const logsRpcUrl = process.env.PUBLIC_LOGS_RPC_URL || previous.logsRpcUrl;
+for (const url of [rpcUrl, logsRpcUrl ?? rpcUrl]) if (new URL(url).protocol !== 'https:') throw new Error('A public HTTPS RPC is required.');
 const provider = new JsonRpcProvider(rpcUrl);
 try {
   if ((await provider.getNetwork()).chainId !== 11155111n) throw new Error('Expected Sepolia.');
@@ -32,7 +36,7 @@ try {
     if (await contract.trustedVerifier() !== settings.verifier || await contract.milestoneReviewer() !== settings.reviewer || !await contract.demoVerification()) throw new Error('Onchain roles do not match deployment settings.');
     await checkVerifierService(settings, receipt.contractAddress);
   }
-  const config = { address: receipt.contractAddress, operator, contractVersion: version, chainId: 11155111, rpcUrl, blockNumber: receipt.blockNumber, deploymentTransaction: hash, abi: artifact.abi,
+  const config = { address: receipt.contractAddress, operator, contractVersion: version, chainId: 11155111, rpcUrl, ...(logsRpcUrl ? { logsRpcUrl } : {}), blockNumber: receipt.blockNumber, deploymentTransaction: hash, abi: artifact.abi,
     ...(settings ? { verifierUrl: settings.verifierUrl, verifier: settings.verifier, milestoneReviewer: settings.reviewer } : {}) };
   mkdirSync('deployments', { recursive: true });
   writeFileSync('deployments/sepolia.json', JSON.stringify(config, null, 2) + '\n');

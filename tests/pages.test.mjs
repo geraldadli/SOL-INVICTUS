@@ -20,6 +20,7 @@ test('Pages connects to the verified Sepolia deployment without publishing deplo
   assert.match(deployment.address, /^0x[\da-f]{40}$/i);
   assert.match(deployment.operator, /^0x[\da-f]{40}$/i);
   assert.equal(new URL(deployment.rpcUrl).protocol, 'https:');
+  if (deployment.logsRpcUrl) assert.equal(new URL(deployment.logsRpcUrl).protocol, 'https:');
   assert.ok(Number.isSafeInteger(deployment.blockNumber) && deployment.blockNumber > 0);
   for (const name of ['buyShares', 'publishReport', 'claimRevenue']) {
     assert.ok(deployment.abi.some(item => item.type === 'function' && item.name === name));

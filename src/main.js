@@ -31,7 +31,7 @@ const nextPeriod = period => period % 100 === 12 ? period + 89 : period + 1;
 const currentPeriod = () => utcPeriod(Date.now() / 1000);
 const chainName = id => ({ 1: 'Ethereum Mainnet', [SEPOLIA]: 'Sepolia', 31337: 'the local test chain', 17000: 'Holesky', 560048: 'Hoodi' })[id] ?? `another network (chain ${id})`;
 const isRejection = error => [error, error?.info?.error, error?.error].some(e => e?.code === 4001 || e?.code === 'ACTION_REJECTED');
-let deployment, provider, contract, signer, address, walletName, accounts = [], state, loadError = '';
+let deployment, provider, logsProvider, contract, signer, address, walletName, accounts = [], state, loadError = '';
 let simulation, walletProvider, walletChainId, usingMetaMask = false, accountTarget, connectAttempt = 0, scanFrom, toastId = 0;
 let safeguards = false;
 let milestoneSupport = false;
@@ -803,7 +803,7 @@ async function refresh() {
     currentAddress ? contract.balanceOf(currentAddress) : 0n, currentAddress ? contract.claimable(currentAddress) : 0n,
     currentAddress ? contract.totalClaimed(currentAddress) : 0n, currentAddress ? provider.getBalance(currentAddress) : 0n,
     // ponytail: after one full scan, rescans only a short overlap of recent blocks; use a dedicated indexer for long-lived projects.
-    provider.getLogs({ address: deployment.address, fromBlock: scanFrom ?? deployment.blockNumber, toBlock: 'latest' }),
+    logsProvider.getLogs({ address: deployment.address, fromBlock: scanFrom ?? deployment.blockNumber, toBlock: 'latest' }),
     readReportingStatus(),
     milestoneSupport ? readMilestones(contract, provider) : null,
   ]);
@@ -868,7 +868,7 @@ async function refreshIncomeAudit() {
   if (simulation || !contract) return;
   const run = ++auditRun;
   incomeAudit = null; auditError = ''; renderVerification();
-  try { const result = await auditIncome(provider, deployment); if (run === auditRun) incomeAudit = result; }
+  try { const result = await auditIncome(logsProvider, deployment); if (run === auditRun) incomeAudit = result; }
   catch (error) { if (run === auditRun) auditError = errorMessage(error); }
   if (run === auditRun) renderVerification();
 }
@@ -1256,6 +1256,12 @@ async function initialize() {
     if (deployment.chainId === 31337 && !['127.0.0.1', 'localhost'].includes(rpc.hostname)) throw new Error('Local development wallets require a loopback RPC.');
     provider = new JsonRpcProvider(deployment.rpcUrl, undefined, { cacheTimeout: -1 });
     if ((await provider.getNetwork()).chainId !== BigInt(deployment.chainId)) throw new Error('Deployment network does not match the node.');
+    // Event history can need a different RPC: many free plans prune old logs or cap getLogs ranges.
+    if (deployment.logsRpcUrl) {
+      if (new URL(deployment.logsRpcUrl).protocol !== 'https:') throw new Error('Invalid logs RPC URL.');
+      logsProvider = new JsonRpcProvider(deployment.logsRpcUrl, undefined, { cacheTimeout: -1 });
+      if ((await logsProvider.getNetwork()).chainId !== BigInt(deployment.chainId)) throw new Error('Logs RPC network does not match the deployment.');
+    } else logsProvider = provider;
     if (await provider.getCode(deployment.address) === '0x') throw new Error('The node restarted. Run npm run deploy to create a new demo contract.');
     contract = new Contract(deployment.address, deployment.abi, provider);
     deployment.operator = await contract.operator();
